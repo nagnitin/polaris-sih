@@ -1,4 +1,4 @@
-import { History, FlaskConical, Wrench, X } from "lucide-react";
+import { History, FlaskConical, Wrench, X, Crosshair } from "lucide-react";
 
 import {
   ResponsiveContainer,
@@ -174,6 +174,15 @@ export default function AssetDetailPanel({
           </div>
         </div>
       )}
+
+      <button
+        className="twin-center-button"
+        onClick={() =>
+          window.dispatchEvent(new Event("polaris-refocus"))
+        }
+      >
+        <Crosshair size={15} /> Center camera on asset
+      </button>
 
       <div className="asset-actions">
         <button

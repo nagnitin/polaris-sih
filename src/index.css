@@ -205,7 +205,8 @@ select:focus-visible {
 }
 
 .brand {
-  min-width: 225px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .brand h1 {
@@ -1836,6 +1837,116 @@ select:focus-visible {
   background: #1e2426;
 }
 
+/* scene wrapper so the hover tooltip positions relative to the canvas */
+.twin-scene-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+/* hover tooltip (glass style, follows the pointer) */
+.twin-tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -130%);
+  background: rgba(9, 13, 15, 0.92);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 10px;
+  padding: 7px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  z-index: 30;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 229, 255, 0.18);
+  font-size: 12.5px;
+}
+
+.twin-tooltip strong {
+  color: #f0f6f4;
+  font-weight: 700;
+}
+
+.twin-tooltip span {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+/* when an asset is selected the inspector becomes an overlay */
+.twin-layout.focus {
+  grid-template-columns: minmax(0, 1fr) 0;
+}
+
+.twin-layout.focus > .asset-panel-empty {
+  display: none;
+}
+
+.twin-overlay-panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: min(345px, 42%);
+  z-index: 25;
+  display: flex;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.twin-overlay-panel .asset-panel {
+  pointer-events: auto;
+  background: rgba(14, 20, 21, 0.82);
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  border-color: rgba(0, 229, 255, 0.22);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.5), 0 0 26px rgba(0, 180, 255, 0.12);
+  animation: twinPanelIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  width: 100%;
+}
+
+@keyframes twinPanelIn {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.twin-center-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 140, 160, 0.35),
+    rgba(0, 229, 255, 0.16)
+  );
+  color: #d9f7fb;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.twin-center-button:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 160, 185, 0.5),
+  rgba(0, 229, 255, 0.26)
+  );
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+}
+
 .twin-hint {
   position: absolute;
   left: 14px;
@@ -3269,4 +3380,46 @@ select:focus-visible {
   .asset-prediction {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+/* ===================== 3D TWIN EMBED (public/digi demo) ===================== */
+
+.twin-embed {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  background: #070b12;
+  box-shadow: 0 18px 50px rgba(3, 8, 20, 0.45);
+  height: clamp(560px, calc(100vh - 210px), 860px);
+}
+
+.twin-embed iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.twin-embed .layer-bar {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  right: auto;
+  top: auto;
+  z-index: 5;
+}
+
+.twin-embed-legend {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 5;
+  background: rgba(10, 16, 28, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  pointer-events: none;
 }

@@ -1,37 +1,25 @@
 import { useState } from "react";
-import { Box, Layers, RotateCcw, MousePointerClick } from "lucide-react";
+import { Box, RotateCcw, MousePointerClick } from "lucide-react";
 
-import StationScene from "../components/StationScene";
-import AssetDetailPanel from "../components/AssetDetailPanel";
-import { PageHeader, SimBadge, StatusDot } from "../components/UI";
+import { PageHeader, SimBadge } from "../components/UI";
 import { LAYERS, STATUS } from "../data/assets";
 import { usePolaris } from "../context/PolarisContext";
 
-export default function ThreeDTwin({ navigate }) {
-  const {
-    assets,
-    station,
-    stationKey,
-    selectedAssetId,
-    setSelectedAssetId,
-    logAction,
-  } = usePolaris();
+/* Maps our layer chips to the demo's camera presets (public/digi/index.html). */
+const LAYER_PRESETS = {
+  energy: "generator",
+  comms: "communication",
+  environment: "sensors",
+  fuel: "fuel",
+  water: "water",
+  structure: "overview",
+};
 
-  const [visibleLayers, setVisibleLayers] = useState(
-    LAYERS.map((l) => l.id)
-  );
+export default function ThreeDTwin() {
+  const { assets, station, stationKey, logAction } = usePolaris();
 
-  const [sceneKey, setSceneKey] = useState(0);
-
-  const selected = assets.find((a) => a.id === selectedAssetId);
-
-  function toggleLayer(id) {
-    setVisibleLayers((prev) =>
-      prev.includes(id)
-        ? prev.filter((l) => l !== id)
-        : [...prev, id]
-    );
-  }
+  const [frameKey, setFrameKey] = useState(0);
+  const [activePreset, setActivePreset] = useState(null);
 
   const counts = Object.keys(STATUS).reduce((acc, key) => {
     acc[key] = assets.filter(
@@ -40,135 +28,80 @@ export default function ThreeDTwin({ navigate }) {
     return acc;
   }, {});
 
+  function sendFocus(presetId) {
+    setActivePreset(presetId);
+    const frame = document.getElementById("digi-frame");
+    if (!frame?.contentWindow) return;
+
+    // The demo exposes focusCameraPreset() globally on window.
+    frame.contentWindow.focusCameraPreset?.(presetId);
+  }
+
+  function resetView() {
+    setFrameKey((k) => k + 1);
+    setActivePreset(null);
+    logAction("3D view reset", stationKey);
+  }
+
   return (
-    <div className="page">
+    <div className="page page-twin">
       <PageHeader
         icon={Box}
         title="3D DIGITAL TWIN"
-        subtitle={`Interactive station model · ${
+        subtitle={`Bharati station interior model · ${
           stationKey === "maitri" ? "Maitri" : "Bharati"
-        } · click any asset for live state`}
+        } · click any highlighted zone for live state`}
       >
         <SimBadge />
 
-        <button
-          className="ghost-button"
-          onClick={() => {
-            setSceneKey((k) => k + 1);
-            setSelectedAssetId(null);
-            logAction("3D view reset", stationKey);
-          }}
-        >
+        <button className="ghost-button" onClick={resetView}>
           <RotateCcw size={15} /> Reset view
         </button>
       </PageHeader>
 
-      <div className="twin-layout">
-        <div className="twin-stage">
-          <div className="layer-bar">
-            <span className="layer-bar-label">
-              <Layers size={14} /> Layers
-            </span>
+      <div className="twin-embed">
+        <iframe
+          key={frameKey}
+          id="digi-frame"
+          src="digi/index.html"
+          title="Bharati station 3D digital twin"
+        />
 
-            {LAYERS.map((layer) => (
-              <button
-                key={layer.id}
-                className={`layer-chip ${
-                  visibleLayers.includes(layer.id) ? "on" : ""
-                }`}
-                onClick={() => toggleLayer(layer.id)}
-              >
-                <i style={{ background: layer.color }} />
-                {layer.label}
-              </button>
-            ))}
-          </div>
+        <div className="layer-bar">
+          <span className="layer-bar-label">
+            <MousePointerClick size={14} /> Twin assets
+          </span>
 
-          <div className="twin-canvas">
-            <StationScene
-              key={`${stationKey}-${sceneKey}`}
-              assets={assets}
-              liveAssets={station.assets}
-              visibleLayers={visibleLayers}
-              selectedAssetId={selectedAssetId}
-              onSelect={setSelectedAssetId}
-            />
+          <button
+            className={`layer-chip ${activePreset === "overview" ? "on" : ""}`}
+            onClick={() => sendFocus("overview")}
+          >
+            <i style={{ background: "#8b9bb4" }} />
+            Station overview
+          </button>
 
-            {!selected && (
-              <div className="twin-hint">
-                <MousePointerClick size={15} />
-                Drag to orbit · scroll to zoom · click an asset
-              </div>
-            )}
-
-            <div className="twin-status-legend">
-              {Object.entries(STATUS).map(([key, meta]) => (
-                <span key={key}>
-                  <i style={{ background: meta.color }} />
-                  {meta.label} <b>{counts[key] || 0}</b>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="asset-strip">
-            {assets
-              .filter((a) => visibleLayers.includes(a.layer))
-              .map((a) => {
-                const live = station.assets[a.id];
-
-                return (
-                  <button
-                    key={a.id}
-                    className={`asset-chip ${
-                      selectedAssetId === a.id ? "active" : ""
-                    }`}
-                    onClick={() => setSelectedAssetId(a.id)}
-                  >
-                    <StatusDot status={live?.status} />
-                    <span>{a.name}</span>
-                    <b>{live?.health}</b>
-                  </button>
-                );
-              })}
-          </div>
+          {LAYERS.filter((l) => LAYER_PRESETS[l.id]).map((layer) => (
+            <button
+              key={layer.id}
+              className={`layer-chip ${
+                activePreset === LAYER_PRESETS[layer.id] ? "on" : ""
+              }`}
+              onClick={() => sendFocus(LAYER_PRESETS[layer.id])}
+            >
+              <i style={{ background: layer.color }} />
+              {layer.label}
+            </button>
+          ))}
         </div>
 
-        {selected ? (
-          <AssetDetailPanel
-            asset={selected}
-            onClose={() => setSelectedAssetId(null)}
-            onSimulate={() => navigate("Simulation")}
-            onHistory={() => navigate("Analytics")}
-          />
-        ) : (
-          <aside className="asset-panel asset-panel-empty">
-            <h3>Asset inspector</h3>
-
-            <p>
-              Select any component in the scene to see live telemetry, its
-              health score, predicted failure probability and the systems
-              that depend on it.
-            </p>
-
-            <div className="inspector-legend">
-              {LAYERS.map((l) => (
-                <div key={l.id}>
-                  <i style={{ background: l.color }} />
-                  <span>{l.label}</span>
-                  <b>
-                    {assets.filter((a) => a.layer === l.id).length}
-                  </b>
-                </div>
-              ))}
-            </div>
-
-            <p className="asset-footnote">
-              Geometry is a simplified representation for operational
-              awareness, based on published NCPOR station descriptions.
-            </p>
-          </aside>
-        )}
+        <div className="twin-status-legend twin-embed-legend">
+          {Object.entries(STATUS).map(([key, meta]) => (
+            <span key={key}>
+              <i style={{ background: meta.color }} />
+              {meta.label} <b>{counts[key] || 0}</b>
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

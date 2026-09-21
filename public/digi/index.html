@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bharati Antarctic Research Station - 3D Digital Twin Interior Model</title>
+    <style>
+        :root {
+            --bg-dark: #070b12;
+            --panel-bg: rgba(10, 16, 28, 0.88);
+            --panel-border: rgba(64, 140, 255, 0.28);
+            --accent-cyan: #00e5ff;
+            --accent-blue: #2979ff;
+            --accent-amber: #ffab00;
+            --accent-green: #00e676;
+            --accent-red: #ff1744;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b9bb4;
+            --font-mono: 'SF Pro Mono', 'Consolas', 'Fira Code', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Glassmorphism UI Panels */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 180, 255, 0.12);
+            position: absolute;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Top Bar / Header */
+        #header-bar {
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .station-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .station-badge {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+        }
+
+        .station-name h1 {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-primary);
+        }
+
+        .station-name p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .telemetry-ticker {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .ticker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .ticker-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ticker-value {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        /* Left Controls Panel */
+        #controls-panel {
+            top: 16px;
+            left: 16px;
+            width: 290px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: calc(100vh - 110px);
+            overflow-y: auto;
+        }
+
+        .panel-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-cyan);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .panel-section-title::before {
+            content: '';
+            width: 4px;
+            height: 12px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(64, 140, 255, 0.2);
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, rgba(41, 121, 255, 0.45), rgba(0, 229, 255, 0.25));
+            border-color: var(--accent-cyan);
+            color: #fff;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        }
+
+        .btn-full {
+            grid-column: span 2;
+        }
+
+        /* Slider Control */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.32);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        /* Right Inspector Panel (Drill-down Telemetry) */
+        #inspector-panel {
+            top: 16px;
+            right: 16px;
+            width: 335px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transform: translateX(380px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #inspector-panel.open {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .inspector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 12px;
+        }
+
+        .inspector-title-group h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .inspector-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-live {
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .badge-warning {
+            background: rgba(255, 171, 0, 0.15);
+            border: 1px solid var(--accent-amber);
+            color: var(--accent-amber);
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .inspector-desc {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .metric-cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-card-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .metric-card-val {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Sparkline canvas */
+        .sparkline-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .sparkline-title {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        canvas.sparkline {
+            width: 100%;
+            height: 45px;
+            display: block;
+        }
+
+        /* Bottom Floor Bar */
+        #bottom-bar {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            align-items: center;
+        }
+
+        .floor-tab {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .floor-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .floor-tab.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-cyan);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(41, 121, 255, 0.5);
+        }
+
+        /* Hover Tooltip in 3D Space */
+        #room-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(9, 13, 22, 0.95);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 229, 255, 0.35);
+            transform: translate(-50%, -120%);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        /* Legend */
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+
+        /* Compass Gizmo */
+        #compass-gizmo {
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            position: absolute;
+            z-index: 10;
+            border-radius: 50%;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="room-tooltip">Asset Name</div>
+
+    <!-- Left Controls Menu -->
+    <aside id="controls-panel" class="glass-panel">
+        <div>
+            <div class="panel-section-title">Control Panel</div>
+            <div class="btn-grid">
+                <button class="btn active" onclick="setShellMode('exterior')">Exterior Only</button>
+                <button class="btn" onclick="setShellMode('interior')">Interior Only</button>
+            </div>
+        </div>
+
+        <!-- <div class="slider-group">
+            <div class="slider-header">
+                <span>Exploded View Separation</span>
+                <span id="explode-val" style="color:var(--accent-cyan); font-family:var(--font-mono);">0%</span>
+            </div>
+            <input type="range" id="explode-slider" min="0" max="100" value="0" oninput="onExplodeChange(this.value)">
+        </div> -->
+
+        <div>
+            <div class="panel-section-title">Digital Twin Assets</div>
+            <div class="btn-grid">
+                <button class="btn btn-full" onclick="focusCameraPreset('overview')">Station Overview</button>
+                <button class="btn" onclick="focusCameraPreset('generator')">Generator Room</button>
+                <button class="btn" onclick="focusCameraPreset('communication')">Communication</button>
+                <button class="btn" onclick="focusCameraPreset('sensors')">Environmental Sensors</button>
+                <button class="btn" onclick="focusCameraPreset('fuel')">Fuel Storage</button>
+                <button class="btn btn-full" onclick="focusCameraPreset('water')">Water System</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="panel-section-title">Subsystem Status Legend</div>
+            <div class="legend-list">
+                <div class="legend-item"><div class="legend-dot" style="background:#ffab00;"></div> Generator Room (Warning)</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#00e676;"></div> Communication (Normal)</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#00e5ff;"></div> Environmental Sensors (Normal)</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#2979ff;"></div> Fuel Storage (Normal)</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#00b0ff;"></div> Water System (Normal)</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="panel-section-title">Digital Twin IoT Pins</div>
+            <button class="btn btn-full" id="toggle-pins-btn" onclick="toggleIoTPins()">
+                <span id="pins-status-dot" style="width:8px; height:8px; border-radius:50%; background:var(--accent-green); display:inline-block;"></span>
+                Toggle Live Sensor Nodes
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Inspector / Asset Drilldown Panel -->
+    <aside id="inspector-panel" class="glass-panel">
+        <div class="inspector-header">
+            <div class="inspector-title-group">
+                <h2 id="inspect-name">Generator Room</h2>
+                <span class="inspector-badge badge-warning" id="inspect-level">POWER & UTILITY • WARNING</span>
+            </div>
+            <button class="close-btn" onclick="closeInspector()">✕</button>
+        </div>
+
+        <p class="inspector-desc" id="inspect-desc">
+            Primary station power plant with diesel gensets, heat exchangers, automatic switchgear, and active telemetry monitoring.
+        </p>
+
+        <div class="metric-cards-grid">
+            <div class="metric-card">
+                <span class="metric-card-label" id="m1-label">Indoor Air Temp</span>
+                <span class="metric-card-val" id="inspect-temp">26.0 °C</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card-label" id="m2-label">Relative Humidity</span>
+                <span class="metric-card-val" id="inspect-humidity">30 %</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card-label" id="m3-label">Core Telemetry</span>
+                <span class="metric-card-val" id="inspect-co2">580 ppm</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card-label" id="m4-label">Output Load</span>
+                <span class="metric-card-val" id="inspect-power">180.0 kW</span>
+            </div>
+        </div>
+
+        <div class="sparkline-box">
+            <div class="sparkline-title">Real-Time Operational Stability (24h Trend)</div>
+            <canvas id="temp-sparkline" class="sparkline" width="280" height="45"></canvas>
+        </div>
+
+        <div class="sparkline-box">
+            <div class="sparkline-title">Subsystem Load & Vibration Profile</div>
+            <canvas id="strain-sparkline" class="sparkline" width="280" height="45"></canvas>
+        </div>
+
+        <button class="btn btn-full active" style="text-align:center; justify-content:center;" onclick="focusInspectedRoom()">
+            Center Camera on Asset
+        </button>
+    </aside>
+
+    <div id="compass-gizmo">
+        <span>N ▲</span>
+    </div>
+
+    <!-- Include Three.js & TWEEN -->
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/OrbitControls.js"></script>
+    <script src="vendor/GLTFLoader.js"></script>
+    <script src="vendor/tween.umd.js"></script>
+
+    <script>
+        /* -------------------------------------------------------------
+           BHARATI RESEARCH STATION - 3D REALISTIC DIGITAL TWIN
+           Dimensions directly calculated from engineering drawings:
+           - Longitudinal: Grids 1 to 21 (~62m total length)
+           - Transverse: Axes A to E (~24m envelope width)
+           - Structural Portal Frames, 45° Chamfered Aerodynamic Skirt
+           - Procedural PBR Textures & Realistic Lighting IBL
+           - Communication Mast with Spinning Anemometer & Wind Vane
+        ------------------------------------------------------------- */
+
+        let scene, camera, renderer, controls, pmremGenerator;
+        let stationGroup, level1Group, level2Group, level3Group, stiltsGroup, shellGroup, portalGroup, sensorsGroup;
+        let anemometerHead; // Rotating cup anemometer
+        let beaconLight;    // Pulsating red air-safety beacon
+        let interactiveRooms = [];
+        let raycaster, mouse;
+        let hoveredRoom = null;
+        let selectedRoom = null;
+        let shellMaterialSolid;
+        let currentShellMode = 'exterior';
+        let currentFloor = 'all';
+        let explodeProgress = 0;
+        let showIoTPins = true;
+        let snowSystem; // Wind / slow snow particle system
+
+        // Digital Twin Asset Database
+        const ROOM_DATABASE = [
+            {
+                id: 'genset',
+                name: 'Generator Room',
+                floor: 'L1',
+                badge: 'POWER & UTILITY • WARNING',
+                badgeClass: 'badge-warning',
+                zone: 'heavy',
+                bounds: { minX: -27.0, maxX: -14.0, minZ: 3.5, maxZ: 10.2, y: 2.8, h: 3.1 },
+                color: 0xffab00,
+                cam: { pos: { x: -24, y: 7.5, z: 18 }, target: { x: -20, y: 4.2, z: 6.8 } },
+                stats: { temp: '78.4 °C', humidity: '30 %', co2: 'WARNING', power: '142.8 kW' },
+                desc: 'Primary power generation plant with 3x heavy-duty Volvo marine diesel gensets, acoustic encapsulation hoods, vibration dampeners, heat recovery exchangers, and automatic switchgear.'
+            },
+            {
+                id: 'fuel_storage',
+                name: 'Fuel Storage',
+                floor: 'L1',
+                badge: 'ENERGY CONTAINMENT • NORMAL',
+                badgeClass: 'badge-live',
+                zone: 'heavy',
+                bounds: { minX: -27.0, maxX: -14.0, minZ: -3.5, maxZ: 3.5, y: 1.5, h: 4.4 },
+                color: 0x2979ff,
+                cam: { pos: { x: -33, y: 8.5, z: 6 }, target: { x: -20, y: 3.4, z: 0 } },
+                stats: { temp: '+12.5 °C', humidity: '78,400 L', co2: '0.00 ppm', power: 'OPTIMAL' },
+                desc: 'Insulated double-walled bulk fuel storage tanks and distribution manifold supplying Arctic-grade diesel directly to the generator cells, boilers, and snow-crawler fleet.'
+            },
+            {
+                id: 'water_system',
+                name: 'Water System',
+                floor: 'L1',
+                badge: 'DESALINATION & RECLAMATION • NORMAL',
+                badgeClass: 'badge-live',
+                zone: 'science',
+                bounds: { minX: -27.0, maxX: -14.0, minZ: -10.2, maxZ: -3.5, y: 2.8, h: 3.1 },
+                color: 0x00b0ff,
+                cam: { pos: { x: -24, y: 7.5, z: -18 }, target: { x: -20, y: 4.2, z: -6.8 } },
+                stats: { temp: 'pH 7.2', humidity: '94,200 L', co2: '14.2 m³/d', power: 'RUNNING' },
+                desc: 'Reverse osmosis seawater desalination skid, secondary greywater biological filtration columns, insulated potable water buffer tanks, and UV sterilization manifold.'
+            },
+            {
+                id: 'env_sensors',
+                name: 'Environmental Sensors',
+                floor: 'L1',
+                badge: 'METEOROLOGY & ATMOSPHERE • NORMAL',
+                badgeClass: 'badge-live',
+                zone: 'science',
+                bounds: { minX: 1.5, maxX: 14.5, minZ: -10.2, maxZ: -1.5, y: 2.8, h: 3.1 },
+                color: 0x00e5ff,
+                cam: { pos: { x: 8, y: 7.5, z: -18 }, target: { x: 8, y: 4.2, z: -5.8 } },
+                stats: { temp: '-28.4 °C', humidity: '42.8 km/h', co2: '1012.4 hPa', power: 'ACTIVE' },
+                desc: 'Atmospheric and meteorological laboratory station logging katabatic wind velocity, barometric gradient, solar UV spectrum, and boundary layer ozone concentrations.'
+            },
+            {
+                id: 'communication',
+                name: 'Communication',
+                floor: 'L3',
+                badge: 'SATCOM & TELEMETRY • NORMAL',
+                badgeClass: 'badge-live',
+                zone: 'observation',
+                bounds: { minX: -8.5, maxX: 4.5, minZ: -5.8, maxZ: 5.8, y: 8.8, h: 6.8 },
+                color: 0x00e676,
+                cam: { pos: { x: -3, y: 18, z: 16 }, target: { x: -2, y: 11.5, z: 0 } },
+                stats: { temp: 'ONLINE', humidity: '100 Mbps', co2: '-82.4 dBm', power: '99.98 %' },
+                desc: 'Primary Satcom Earth Station featuring a lattice communication mast, meteorological spinning cup anemometer, wind vane, HF/VHF dipole whip array, and microwave link transceiver.'
+            }
+        ];
+
+        let materials = {};
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initThree();
+            generateProceduralTextures();
+            buildPhotorealisticEnvironment();
+            buildWindEffect();
+            buildTerrainAndFoundations();
+            buildLevel1();
+            buildLevel2();
+            buildLevel3();
+            buildExteriorShell();
+            buildStructuralExoskeleton();
+            buildIoTSensorNodes();
+            setupInteractivity();
+            animate();
+            initTelemetrySimulation();
+        });
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0c1424, 0.006);
+
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.5, 1200);
+            camera.position.set(54, 30, 56);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.15;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            pmremGenerator = new THREE.PMREMGenerator(renderer);
+            pmremGenerator.compileEquirectangularShader();
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.03;
+            controls.minDistance = 6;
+            controls.maxDistance = 220;
+            controls.target.set(0, 6, 0);
+
+            // Polar Sun Light
+            const sunLight = new THREE.DirectionalLight(0xfff8ee, 1.6);
+            sunLight.position.set(70, 55, 45);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 10;
+            sunLight.shadow.camera.far = 190;
+            sunLight.shadow.camera.left = -55;
+            sunLight.shadow.camera.right = 55;
+            sunLight.shadow.camera.top = 55;
+            sunLight.shadow.camera.bottom = -55;
+            sunLight.shadow.bias = -0.0003;
+            scene.add(sunLight);
+
+            // Cold Sky Ambient Light
+            const skyLight = new THREE.AmbientLight(0xd5e7fc, 0.65);
+            scene.add(skyLight);
+
+            // Snow ground bounce light
+            const iceBounceLight = new THREE.DirectionalLight(0x7fb6e8, 0.45);
+            iceBounceLight.position.set(-45, -20, -45);
+            scene.add(iceBounceLight);
+
+            // Master Groups
+            stationGroup = new THREE.Group();
+            stiltsGroup = new THREE.Group();
+            level1Group = new THREE.Group();
+            level2Group = new THREE.Group();
+            level3Group = new THREE.Group();
+            shellGroup = new THREE.Group();
+            portalGroup = new THREE.Group();
+            sensorsGroup = new THREE.Group();
+
+            stationGroup.add(stiltsGroup);
+            stationGroup.add(level1Group);
+            stationGroup.add(level2Group);
+            stationGroup.add(level3Group);
+            stationGroup.add(shellGroup);
+            stationGroup.add(portalGroup);
+            stationGroup.add(sensorsGroup);
+            scene.add(stationGroup);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        /* -------------------------------------------------------------
+           SLOW MODE WIND PARTICLES
+        ------------------------------------------------------------- */
+        function buildWindEffect() {
+            const snowGeo = new THREE.BufferGeometry();
+            const snowCount = 3500;
+            const positions = new Float32Array(snowCount * 3);
+            const velocities = new Float32Array(snowCount * 3);
+
+            for (let i = 0; i < snowCount * 3; i += 3) {
+                positions[i]     = (Math.random() - 0.5) * 220; // X
+                positions[i + 1] = Math.random() * 55;          // Y (height)
+                positions[i + 2] = (Math.random() - 0.5) * 220; // Z
+
+                // SLOW MODE VELOCITIES
+                velocities[i]     = -0.16 - Math.random() * 0.18; // gentle sideways drift
+                velocities[i + 1] = -0.04 - Math.random() * 0.05; // slow descent
+                velocities[i + 2] =  0.04 + Math.random() * 0.06; // soft depth drift
+            }
+
+            snowGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            snowGeo.userData = { velocities: velocities };
+
+            const snowMat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.22,
+                transparent: true,
+                opacity: 0.65,
+                blending: THREE.AdditiveBlending
+            });
+
+            snowSystem = new THREE.Points(snowGeo, snowMat);
+            scene.add(snowSystem);
+        }
+
+        /* -------------------------------------------------------------
+           PROCEDURAL HIGH-REALISM TEXTURES & POLAR HDR SKY
+        ------------------------------------------------------------- */
+        function generateProceduralTextures() {
+            // 1. Brushed Aluminum Composite Facade Texture
+            const facadeCanvas = document.createElement('canvas');
+            facadeCanvas.width = 512;
+            facadeCanvas.height = 512;
+            const fctx = facadeCanvas.getContext('2d');
+            fctx.fillStyle = '#d2dde8';
+            fctx.fillRect(0, 0, 512, 512);
+
+            for (let i = 0; i < 4000; i++) {
+                fctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(140,165,190,0.08)';
+                const y = Math.random() * 512;
+                fctx.fillRect(0, y, 512, 1);
+            }
+            fctx.strokeStyle = '#5a6d82';
+            fctx.lineWidth = 4;
+            fctx.strokeRect(0, 0, 512, 512);
+            fctx.strokeRect(0, 256, 512, 2);
+            fctx.fillStyle = '#405265';
+            [[12, 12], [500, 12], [12, 500], [500, 500], [12, 244], [500, 244]].forEach(([rx, ry]) => {
+                fctx.beginPath();
+                fctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+                fctx.fill();
+            });
+            const facadeTex = new THREE.CanvasTexture(facadeCanvas);
+            facadeTex.wrapS = THREE.RepeatWrapping;
+            facadeTex.wrapT = THREE.RepeatWrapping;
+            facadeTex.repeat.set(4, 2);
+
+            // 2. Windblown Sastrugi Snow Bump Map
+            const snowCanvas = document.createElement('canvas');
+            snowCanvas.width = 512;
+            snowCanvas.height = 512;
+            const sctx = snowCanvas.getContext('2d');
+            sctx.fillStyle = '#8080ff';
+            sctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 300; i++) {
+                const sx = Math.random() * 512;
+                const sy = Math.random() * 512;
+                const sw = 80 + Math.random() * 140;
+                const sh = 10 + Math.random() * 20;
+                const grad = sctx.createLinearGradient(sx, sy, sx + sw, sy + sh);
+                grad.addColorStop(0, 'rgba(180, 160, 255, 0.4)');
+                grad.addColorStop(0.5, 'rgba(100, 120, 220, 0.5)');
+                grad.addColorStop(1, 'rgba(128, 128, 255, 0)');
+                sctx.fillStyle = grad;
+                sctx.beginPath();
+                sctx.ellipse(sx, sy, sw / 2, sh / 2, 0.25, 0, Math.PI * 2);
+                sctx.fill();
+            }
+            const snowBump = new THREE.CanvasTexture(snowCanvas);
+            snowBump.wrapS = THREE.RepeatWrapping;
+            snowBump.wrapT = THREE.RepeatWrapping;
+            snowBump.repeat.set(8, 8);
+
+            // 3. Diamond Steel Plate Texture
+            const plateCanvas = document.createElement('canvas');
+            plateCanvas.width = 256;
+            plateCanvas.height = 256;
+            const pctx = plateCanvas.getContext('2d');
+            pctx.fillStyle = '#222933';
+            pctx.fillRect(0, 0, 256, 256);
+            pctx.fillStyle = '#374252';
+            for (let x = 8; x < 256; x += 32) {
+                for (let y = 8; y < 256; y += 32) {
+                    pctx.fillRect(x, y, 16, 4);
+                    pctx.fillRect(x + 12, y + 12, 4, 16);
+                }
+            }
+            const diamondPlateTex = new THREE.CanvasTexture(plateCanvas);
+            diamondPlateTex.wrapS = THREE.RepeatWrapping;
+            diamondPlateTex.wrapT = THREE.RepeatWrapping;
+            diamondPlateTex.repeat.set(6, 4);
+
+            materials = {
+                facadePanel: new THREE.MeshStandardMaterial({
+                    map: facadeTex,
+                    roughness: 0.32,
+                    metalness: 0.65,
+                    bumpMap: facadeTex,
+                    bumpScale: 0.02
+                }),
+                steelExoskeleton: new THREE.MeshStandardMaterial({
+                    color: 0x4f6882,
+                    roughness: 0.28,
+                    metalness: 0.85
+                }),
+                steelDark: new THREE.MeshStandardMaterial({
+                    color: 0x22272e,
+                    roughness: 0.45,
+                    metalness: 0.75
+                }),
+                steelSilver: new THREE.MeshStandardMaterial({
+                    color: 0xc4d1de,
+                    roughness: 0.22,
+                    metalness: 0.9
+                }),
+                stiltHeavy: new THREE.MeshStandardMaterial({
+                    color: 0x333c48,
+                    roughness: 0.4,
+                    metalness: 0.7
+                }),
+                floorL1: new THREE.MeshStandardMaterial({
+                    map: diamondPlateTex,
+                    roughness: 0.6,
+                    metalness: 0.5
+                }),
+                floorL2: new THREE.MeshStandardMaterial({
+                    color: 0x8a7764,
+                    roughness: 0.45,
+                    metalness: 0.1
+                }),
+                floorL3: new THREE.MeshStandardMaterial({
+                    color: 0x343a46,
+                    roughness: 0.6,
+                    metalness: 0.2
+                }),
+                wallDrywall: new THREE.MeshStandardMaterial({
+                    color: 0xebf1f7,
+                    roughness: 0.9
+                }),
+                polarGlass: new THREE.MeshPhysicalMaterial({
+                    color: 0xa9d9f5,
+                    transparent: true,
+                    opacity: 0.45,
+                    roughness: 0.05,
+                    metalness: 0.15,
+                    transmission: 0.72,
+                    ior: 1.52,
+                    reflectivity: 0.95
+                }),
+                snowSastrugi: new THREE.MeshStandardMaterial({
+                    color: 0xf0f6fd,
+                    roughness: 0.82,
+                    metalness: 0.04,
+                    bumpMap: snowBump,
+                    bumpScale: 0.18
+                }),
+                rockAntarctic: new THREE.MeshStandardMaterial({
+                    color: 0x38393e,
+                    roughness: 0.95
+                }),
+                machineryGreen: new THREE.MeshStandardMaterial({
+                    color: 0x1d5e2d,
+                    roughness: 0.38,
+                    metalness: 0.45
+                }),
+                machineryYellow: new THREE.MeshStandardMaterial({
+                    color: 0xffab00,
+                    roughness: 0.32,
+                    metalness: 0.35
+                }),
+                furnitureWhite: new THREE.MeshStandardMaterial({ color: 0xf5f7fa, roughness: 0.5 }),
+                furnitureBlue: new THREE.MeshStandardMaterial({ color: 0x1565c0, roughness: 0.6 }),
+                furnitureLeather: new THREE.MeshStandardMaterial({ color: 0x22272f, roughness: 0.35 }),
+                glowCyan: new THREE.MeshBasicMaterial({ color: 0x00e5ff }),
+                glowGreen: new THREE.MeshBasicMaterial({ color: 0x00e676 }),
+                glowOrange: new THREE.MeshBasicMaterial({ color: 0xff9100 }),
+                beaconRed: new THREE.MeshBasicMaterial({ color: 0xff1744 })
+            };
+        }
+
+        function buildPhotorealisticEnvironment() {
+            const skyCanvas = document.createElement('canvas');
+            skyCanvas.width = 1024;
+            skyCanvas.height = 512;
+            const ctx = skyCanvas.getContext('2d');
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
+            skyGrad.addColorStop(0.0, '#10223b');
+            skyGrad.addColorStop(0.35, '#2e5b88');
+            skyGrad.addColorStop(0.5, '#9bc1e8');
+            skyGrad.addColorStop(0.52, '#d6e8fa');
+            skyGrad.addColorStop(1.0, '#1a2736');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, 1024, 512);
+
+            const sunGrad = ctx.createRadialGradient(720, 240, 5, 720, 240, 140);
+            sunGrad.addColorStop(0, '#ffffff');
+            sunGrad.addColorStop(0.2, '#fff6db');
+            sunGrad.addColorStop(0.6, 'rgba(255, 230, 180, 0.4)');
+            sunGrad.addColorStop(1, 'rgba(155, 193, 232, 0)');
+            ctx.fillStyle = sunGrad;
+            ctx.beginPath();
+            ctx.arc(720, 240, 140, 0, Math.PI * 2);
+            ctx.fill();
+
+            const skyTexture = new THREE.CanvasTexture(skyCanvas);
+            skyTexture.mapping = THREE.EquirectangularReflectionMapping;
+
+            const envMap = pmremGenerator.fromEquirectangular(skyTexture).texture;
+            scene.background = envMap;
+            scene.environment = envMap;
+            skyTexture.dispose();
+        }
+
+        function createBox(w, h, d, x, y, z, mat, parent, castShadow = true) {
+            const geom = new THREE.BoxGeometry(w, h, d);
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = castShadow;
+            mesh.receiveShadow = true;
+            if (parent) parent.add(mesh);
+            return mesh;
+        }
+
+        function createCylinder(rt, rb, h, seg, x, y, z, mat, parent) {
+            const geom = new THREE.CylinderGeometry(rt, rb, h, seg);
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            if (parent) parent.add(mesh);
+            return mesh;
+        }
+
+        /* -------------------------------------------------------------
+           1. FOUNDATIONS, BIFURCATED V-STILTS & TERRAIN
+        ------------------------------------------------------------- */
+        function buildTerrainAndFoundations() {
+            // Load your custom 3D terrain model
+            const terrainLoader = new THREE.GLTFLoader();
+            terrainLoader.load('terrain.glb', function(gltf) {
+                const terrainModel = gltf.scene;
+
+                terrainModel.position.set(0, -1.0, 0);
+                terrainModel.scale.set(2.0, 2.0, 2.0);
+
+                terrainModel.traverse(function(node) {
+                    if (node.isMesh) {
+                        node.receiveShadow = true;
+                        node.castShadow = false;
+                    }
+                });
+
+                scene.add(terrainModel);
+            });
+
+            const structuralGridsX = [
+                -27, -23.5, -20, -16.5, -13, -9.5, -6, -2.5, 1, 4.5, 8, 11.5, 15, 18.5, 22, 25.5, 27.5
+            ];
+            const stiltAxesZ = [-7.0, 7.0];
+
+            structuralGridsX.forEach((gx) => {
+                const isCantileverOpenBay = gx > 5.5;
+                const stiltHeight = isCantileverOpenBay ? 5.8 : 2.8;
+
+                stiltAxesZ.forEach(gz => {
+                    createCylinder(0.38, 0.38, stiltHeight, 16, gx, stiltHeight / 2, gz, materials.stiltHeavy, stiltsGroup);
+                    createCylinder(0.8, 1.05, 0.6, 16, gx, 0.3, gz, materials.steelDark, stiltsGroup);
+                    createBox(1.2, 0.22, 1.2, gx, stiltHeight, gz, materials.steelDark, stiltsGroup);
+                });
+
+                if (gx === -13 || gx === -2.5 || gx === 8) {
+                    const leftStrut = createCylinder(0.24, 0.24, 4.5, 12, gx, stiltHeight * 0.72, -4.3, materials.steelExoskeleton, stiltsGroup);
+                    leftStrut.rotation.x = 0.52;
+
+                    const rightStrut = createCylinder(0.24, 0.24, 4.5, 12, gx, stiltHeight * 0.72, 4.3, materials.steelExoskeleton, stiltsGroup);
+                    rightStrut.rotation.x = -0.52;
+                }
+            });
+
+            for (let z of [-7.0, 7.0]) {
+                createBox(34, 0.5, 0.45, -10.5, 2.8, z, materials.stiltHeavy, stiltsGroup);
+                createBox(22, 0.65, 0.45, 16.5, 5.8, z, materials.stiltHeavy, stiltsGroup);
+            }
+
+            createBox(14.5, 2.6, 14.0, -19.5, 1.3, 0, materials.steelDark, stiltsGroup);
+
+            buildExteriorStair(-2.5, 0, -10.8, -Math.PI / 2);
+            buildExteriorStair(-2.5, 0, 10.8, Math.PI / 2);
+        }
+
+        function buildExteriorStair(x, y, z, rotY) {
+            const stairGroup = new THREE.Group();
+            stairGroup.position.set(x, y, z);
+            stairGroup.rotation.y = rotY;
+
+            const steps = 14;
+            const stepW = 2.4;
+            const stepRise = 3.0 / steps;
+            const stepRun = 0.32;
+
+            for (let i = 0; i < steps; i++) {
+                createBox(stepW, 0.08, stepRun, 0, (i + 0.5) * stepRise, i * stepRun, materials.steelSilver, stairGroup);
+            }
+
+            const railLen = steps * stepRun * 1.05;
+            const leftRail = createBox(0.06, 0.9, railLen, -stepW / 2, 1.8, (steps * stepRun) / 2, materials.machineryYellow, stairGroup);
+            const rightRail = createBox(0.06, 0.9, railLen, stepW / 2, 1.8, (steps * stepRun) / 2, materials.machineryYellow, stairGroup);
+            leftRail.rotation.x = 0.52;
+            rightRail.rotation.x = 0.52;
+
+            stiltsGroup.add(stairGroup);
+        }
+
+        /* -------------------------------------------------------------
+           2. LEVEL 1 - HEAVY OPERATIONS, GENERATORS, FUEL & SENSORS
+        ------------------------------------------------------------- */
+        function buildLevel1() {
+            level1Group.position.y = 0;
+
+            createBox(33.5, 0.35, 19.8, -11.25, 2.82, 0, materials.floorL1, level1Group);
+
+            createBox(13.0, 0.3, 18.0, -20.0, 1.5, 0, new THREE.MeshStandardMaterial({ color: 0x1a1e26, roughness: 0.85 }), level1Group);
+
+            // Generator Room - Fixed Wall Collision
+            const loader = new THREE.GLTFLoader();
+            
+            loader.load('my_generator.glb', function(gltf) {
+                const myModel = gltf.scene;
+
+                // Scale & Rotation
+                myModel.scale.set(2.1, 2.1, 2.1);
+                myModel.rotation.y = -Math.PI / 2;
+
+                // Quality fixes
+                myModel.traverse(function(node) {
+                    if (node.isMesh) {
+                        node.castShadow = false;
+                        node.receiveShadow = true;
+
+                        if (node.material) {
+                            node.material.side = THREE.DoubleSide;
+                            node.material.transparent = false;
+                            node.material.depthWrite = true;
+                            node.material.depthTest = true;
+                            node.material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                // --- GENERATOR 1 ---
+                const gen1 = myModel;
+                gen1.position.set(-23.5, 2.85, 6.8);
+                level1Group.add(gen1);
+
+                // --- GENERATOR 2 ---
+                const gen2 = myModel.clone();
+                gen2.position.set(-17.8, 2.85, 6.8);
+                level1Group.add(gen2);
+            });
+
+            // 2. FUEL STORAGE - Tank Container Model
+            const fuelLoader = new THREE.GLTFLoader();
+            
+            fuelLoader.load('tank_container.glb', function(gltf) {
+                const fuelModel = gltf.scene;
+
+                fuelModel.position.set(-20.5, 2.85, 0);
+                fuelModel.scale.set(0.4, 0.35, 0.6); 
+                fuelModel.rotation.y = Math.PI / 2;
+
+                fuelModel.traverse(function(node) {
+                    if (node.isMesh) {
+                        node.castShadow = false;
+                        node.receiveShadow = true;
+                        if (node.material) {
+                            node.material.side = THREE.DoubleSide;
+                            node.material.transparent = false;
+                            node.material.depthWrite = true;
+                            node.material.depthTest = true;
+                            node.material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                level1Group.add(fuelModel);
+            });
+
+            // Water System
+            for (let w = 0; w < 4; w++) {
+                const wx = -24.5 + w * 2.8;
+                createCylinder(0.75, 0.75, 2.4, 16, wx, 4.1, -6.8, materials.steelSilver, level1Group);
+            }
+
+            createBox(0.25, 3.0, 19.8, -14.0, 4.45, 0, materials.wallDrywall, level1Group);
+
+            buildCentralStaircase(-2.5, 2.85, 0, 3.0, level1Group);
+
+            // Environmental Sensors
+            buildLabRoom(8.0, 2.85, -5.8, 13.0, 8.0, 'sensors', level1Group);
+            buildLabRoom(8.0, 2.85, 5.8, 13.0, 8.0, 'biology', level1Group);
+        }
+
+        function buildSnowCrawler(x, y, z, parent) {
+            const vGroup = new THREE.Group();
+            vGroup.position.set(x, y, z);
+
+            createBox(4.8, 0.85, 0.75, 0, 0.42, -1.3, materials.steelDark, vGroup);
+            createBox(4.8, 0.85, 0.75, 0, 0.42, 1.3, materials.steelDark, vGroup);
+
+            const chassisMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.35 });
+            createBox(4.0, 1.5, 2.1, -0.2, 1.45, 0, chassisMat, vGroup);
+            createBox(1.7, 0.95, 2.05, 0.7, 1.75, 0, materials.polarGlass, vGroup);
+
+            const blade = createBox(0.25, 0.95, 3.4, 2.4, 0.55, 0, materials.machineryYellow, vGroup);
+            blade.rotation.y = 0.08;
+
+            createCylinder(0.12, 0.12, 0.2, 8, 0.4, 2.3, 0, materials.glowOrange, vGroup);
+            parent.add(vGroup);
+        }
+
+        function buildLabRoom(cx, cy, cz, w, d, type, parent) {
+    if (type === 'sensors') {
+        for (let r = -2; r <= 2; r += 2) {
+            createBox(0.9, 2.2, 0.85, cx + 4.8, cy + 1.1, cz + r * 1.1, materials.steelDark, parent);
+            createBox(0.05, 0.8, 0.55, cx + 4.3, cy + 1.35, cz + r * 1.1, materials.glowCyan, parent, false);
+        }
+    }
+}
+
+        /* -------------------------------------------------------------
+           3. LEVEL 2 - LIVING, MESS, LOUNGE & CORRIDORS
+        ------------------------------------------------------------- */
+        function buildLevel2() {
+            level2Group.position.y = 0;
+
+            createBox(58.0, 0.35, 21.6, 0, 5.82, 0, materials.floorL2, level2Group);
+
+            createBox(56.0, 0.02, 1.8, 0, 6.01, -4.8, new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.5 }), level2Group);
+            createBox(56.0, 0.02, 1.8, 0, 6.01, 4.8, new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.5 }), level2Group);
+
+            buildCentralStaircase(-2.5, 5.85, 0, 3.0, level2Group);
+            createBox(0.2, 2.9, 8.5, -3.8, 7.45, 0, materials.wallDrywall, level2Group);
+            createBox(0.2, 2.9, 8.5, 3.8, 7.45, 0, materials.wallDrywall, level2Group);
+
+            for (let c = 0; c < 11; c++) {
+                const cx = -3.5 + c * 2.8;
+                buildCrewCabin(cx, 5.85, -8.2, 0, level2Group);
+                createBox(0.15, 2.9, 4.6, cx + 1.4, 7.45, -8.2, materials.wallDrywall, level2Group);
+            }
+            for (let c = 0; c < 11; c++) {
+                const cx = -3.5 + c * 2.8;
+                buildCrewCabin(cx, 5.85, 8.2, Math.PI, level2Group);
+                createBox(0.15, 2.9, 4.6, cx + 1.4, 7.45, 8.2, materials.wallDrywall, level2Group);
+            }
+
+            buildPanoramicLounge(22.0, 5.85, 0, level2Group);
+        }
+
+        function buildCrewCabin(x, y, z, rotY, parent) {
+            const cabGroup = new THREE.Group();
+            cabGroup.position.set(x, y, z);
+            cabGroup.rotation.y = rotY;
+
+            createBox(1.1, 0.45, 2.1, -0.6, 0.22, 1.0, materials.furnitureWhite, cabGroup);
+            createBox(1.0, 0.15, 1.6, -0.6, 0.52, 0.8, materials.furnitureBlue, cabGroup);
+            createBox(1.0, 0.75, 0.7, 0.6, 0.38, -1.0, materials.furnitureWhite, cabGroup);
+            createBox(0.4, 0.8, 0.4, 0.6, 0.4, -0.3, materials.furnitureLeather, cabGroup);
+            createBox(0.35, 0.22, 0.03, 0.6, 0.88, -1.1, materials.glowCyan, cabGroup, false);
+
+            parent.add(cabGroup);
+        }
+
+        function buildAuditorium(cx, cy, cz, parent) {
+            const audGroup = new THREE.Group();
+            audGroup.position.set(cx, cy, cz);
+
+            for (let t = 0; t < 4; t++) {
+                createBox(7.2, 0.32 * (t + 1), 1.7, 0, (0.32 * (t + 1)) / 2, -2.4 + t * 1.7, materials.floorL1, audGroup);
+                for (let s = -2.8; s <= 2.8; s += 1.1) {
+                    createBox(0.55, 0.85, 0.52, s, 0.32 * (t + 1) + 0.45, -2.4 + t * 1.7, materials.furnitureLeather, audGroup);
+                }
+            }
+            createBox(5.5, 2.2, 0.1, 0, 1.8, 4.2, new THREE.MeshBasicMaterial({ color: 0x0b2d64 }), audGroup, false);
+            parent.add(audGroup);
+        }
+
+        function buildPanoramicLounge(cx, cy, cz, parent) {
+            const lGroup = new THREE.Group();
+            lGroup.position.set(cx, cy, cz);
+
+            createBox(1.0, 0.9, 7.5, -3.8, 0.45, 0, materials.furnitureLeather, lGroup);
+        }
+
+        /* -------------------------------------------------------------
+           4. LEVEL 3 - RECESSED OBSERVATION, HVAC & SATCOM
+        ------------------------------------------------------------- */
+        function buildLevel3() {
+            level3Group.position.y = 0;
+
+            // Recessed Level 3 structure (Grids 3 to 10)
+            createBox(20.0, 0.35, 14.0, -11.0, 8.82, 0, materials.floorL3, level3Group);
+            createBox(12.0, 2.8, 11.0, -14.5, 10.35, 0, materials.wallDrywall, level3Group);
+
+            // Generator exhaust flues
+            for (let e = 0; e < 3; e++) {
+                createCylinder(0.25, 0.25, 1.8, 12, -18.5 + e * 0.9, 12.4, 2.5, materials.steelSilver, level3Group);
+                createCylinder(0.35, 0.25, 0.3, 12, -18.5 + e * 0.9, 13.2, 2.5, materials.machineryYellow, level3Group);
+            }
+
+            // Outdoor observation terrace deck (Grids 9 to 13)
+            createBox(9.0, 0.25, 13.0, 3.5, 8.85, 0, materials.floorL3, level3Group);
+            buildDeckRailings(3.5, 8.95, 0, 9.0, 13.0, level3Group);
+
+            // Satellite tracking dish
+            const dish = new THREE.Mesh(
+                new THREE.SphereGeometry(1.6, 24, 12, 0, Math.PI * 2, 0, 0.9),
+                materials.steelSilver
+            );
+            dish.position.set(-7.5, 12.8, -3.8);
+            dish.rotation.x = -0.55;
+            dish.rotation.y = 0.75;
+            level3Group.add(dish);
+            createCylinder(0.12, 0.16, 2.5, 8, -7.5, 10.5, -3.8, materials.steelDark, level3Group);
+
+            /* --- HIGH-ALTITUDE COMMUNICATION MAST & METEOROLOGICAL ANEMOMETER --- */
+            buildCommunicationMast(-4.8, 8.85, 2.8, level3Group);
+        }
+
+        function buildCommunicationMast(x, baseY, z, parent) {
+            const mastGroup = new THREE.Group();
+            mastGroup.position.set(x, baseY, z);
+
+            createCylinder(0.35, 0.45, 0.8, 12, 0, 0.4, 0, materials.steelDark, mastGroup);
+            createBox(1.2, 0.1, 1.2, 0, 0.05, 0, materials.steelSilver, mastGroup);
+
+            // Tall galvanized tubular telecommunications mast
+            createCylinder(0.12, 0.16, 7.5, 12, 0, 4.5, 0, materials.steelSilver, mastGroup);
+
+            // Triangular lattice diagonal stay struts
+            for (let a = 0; a < 3; a++) {
+                const angle = (a * Math.PI * 2) / 3;
+                const stayX = Math.cos(angle) * 0.55;
+                const stayZ = Math.sin(angle) * 0.55;
+                const stay = createCylinder(0.025, 0.025, 2.6, 6, stayX, 1.3, stayZ, materials.steelSilver, mastGroup);
+                stay.rotation.x = Math.sin(angle) * 0.22;
+                stay.rotation.z = Math.cos(angle) * 0.22;
+            }
+
+            // Lower Cross-arm spar with vertical VHF/HF dipole whip antennas
+            createBox(2.2, 0.06, 0.06, 0, 4.8, 0, materials.steelSilver, mastGroup);
+            createCylinder(0.02, 0.02, 1.8, 6, -1.0, 5.6, 0, materials.steelSilver, mastGroup);
+            createCylinder(0.02, 0.02, 1.8, 6, 1.0, 5.6, 0, materials.steelSilver, mastGroup);
+
+            // Microwave transceiver drum antenna
+            const drum = createCylinder(0.42, 0.42, 0.32, 16, 0, 3.6, 0.45, materials.furnitureWhite, mastGroup);
+            drum.rotation.x = Math.PI / 2;
+            createCylinder(0.04, 0.04, 0.45, 8, 0, 3.6, 0.2, materials.steelDark, mastGroup);
+
+            // Upper Cross-arm with dual whip antennas
+            createBox(1.4, 0.05, 0.05, 0, 7.2, 0, materials.steelSilver, mastGroup);
+            createCylinder(0.015, 0.015, 1.4, 6, -0.65, 7.8, 0, materials.steelSilver, mastGroup);
+            createCylinder(0.015, 0.015, 1.4, 6, 0.65, 7.8, 0, materials.steelSilver, mastGroup);
+
+            // Pulsating Red Obstruction Beacon Light
+            beaconLight = createCylinder(0.08, 0.08, 0.22, 10, 0, 8.35, 0, materials.beaconRed, mastGroup);
+
+            // ROTATING METEOROLOGICAL 3-CUP ANEMOMETER & WIND VANE
+            anemometerHead = new THREE.Group();
+            anemometerHead.position.set(0, 8.55, 0);
+
+            createCylinder(0.04, 0.04, 0.2, 8, 0, 0.1, 0, materials.steelDark, anemometerHead);
+
+            for (let i = 0; i < 3; i++) {
+                const cupAngle = (i * Math.PI * 2) / 3;
+                const armX = Math.cos(cupAngle) * 0.35;
+                const armZ = Math.sin(cupAngle) * 0.35;
+
+                const arm = createBox(0.35, 0.015, 0.015, armX / 2, 0.12, armZ / 2, materials.steelSilver, anemometerHead);
+                arm.rotation.y = -cupAngle;
+
+                const cup = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.09, 8, 8, 0, Math.PI),
+                    materials.furnitureWhite
+                );
+                cup.position.set(armX, 0.12, armZ);
+                cup.rotation.y = -cupAngle + Math.PI / 2;
+                anemometerHead.add(cup);
+            }
+
+            // Wind direction pointer vane
+            createBox(0.02, 0.12, 0.28, 0, 0.26, -0.22, materials.furnitureWhite, anemometerHead);
+            const vaneNose = createCylinder(0.02, 0.005, 0.22, 6, 0, 0.26, 0.16, materials.machineryYellow, anemometerHead);
+            vaneNose.rotation.x = Math.PI / 2;
+
+            mastGroup.add(anemometerHead);
+            parent.add(mastGroup);
+        }
+
+        function buildDeckRailings(cx, cy, cz, w, d, parent) {
+            const rMat = materials.steelSilver;
+            const h = 1.05;
+            createBox(w, 0.05, 0.05, cx, cy + h, cz - d / 2, rMat, parent);
+            createBox(w, 0.05, 0.05, cx, cy + h, cz + d / 2, rMat, parent);
+            createBox(0.05, 0.05, d, cx - w / 2, cy + h, cz, rMat, parent);
+            createBox(0.05, 0.05, d, cx + w / 2, cy + h, cz, rMat, parent);
+        }
+
+        function buildCentralStaircase(x, baseY, z, floorH, parent) {
+            const stairGroup = new THREE.Group();
+            stairGroup.position.set(x, baseY, z);
+
+            const steps = 14;
+            const flightW = 1.8;
+            const rise = floorH / steps;
+            const run = 0.28;
+
+            for (let i = 0; i < steps / 2; i++) {
+                createBox(flightW, 0.14, run, -1.0, (i + 0.5) * rise, -2 + i * run, materials.steelSilver, stairGroup);
+            }
+            createBox(flightW * 2.2, 0.2, 1.6, 0, (steps / 2) * rise, 0.2, materials.floorL1, stairGroup);
+            for (let i = steps / 2; i < steps; i++) {
+                createBox(flightW, 0.14, run, 1.0, (i + 0.5) * rise, 2.4 - (i - steps / 2) * run, materials.steelSilver, stairGroup);
+            }
+            parent.add(stairGroup);
+        }
+
+        /* -------------------------------------------------------------
+           5. AERODYNAMIC ENVELOPE & FACETED HULL
+        ------------------------------------------------------------- */
+        function buildExteriorShell() {
+            shellMaterialSolid = materials.facadePanel;
+
+            // Aerodynamic 45° wind chamfers
+            const chamferNorth = createBox(34.0, 0.18, 4.4, -11.0, 4.3, -9.0, shellMaterialSolid, shellGroup);
+            chamferNorth.rotation.x = -0.78;
+
+            const chamferSouth = createBox(34.0, 0.18, 4.4, -11.0, 4.3, 9.0, shellMaterialSolid, shellGroup);
+            chamferSouth.rotation.x = 0.78;
+
+            // Cantilever underbelly transition plate
+            createBox(24.0, 0.25, 21.6, 17.0, 5.75, 0, shellMaterialSolid, shellGroup);
+
+            // Level 2 roof snow-shedding chamfers
+            const roofChamferNorth = createBox(59.0, 0.18, 3.6, 0, 9.0, -9.6, shellMaterialSolid, shellGroup);
+            roofChamferNorth.rotation.x = 0.45;
+
+            const roofChamferSouth = createBox(59.0, 0.18, 3.6, 0, 9.0, 9.6, shellMaterialSolid, shellGroup);
+            roofChamferSouth.rotation.x = -0.45;
+
+            // Continuous Level 2 Ribbon Glazing
+            createBox(58.0, 1.5, 0.15, 0, 7.5, -10.8, materials.polarGlass, shellGroup);
+            createBox(58.0, 1.5, 0.15, 0, 7.5, 10.8, materials.polarGlass, shellGroup);
+
+            // East End Panoramic Prow Window
+            createBox(0.15, 2.4, 20.0, 29.0, 7.3, 0, materials.polarGlass, shellGroup);
+            createBox(0.15, 2.0, 18.0, -29.0, 7.3, 0, materials.polarGlass, shellGroup);
+
+            createBox(58.0, 0.2, 16.0, 0, 9.2, 0, shellMaterialSolid, shellGroup);
+            createBox(13.0, 3.0, 12.4, -14.5, 10.5, 0, shellMaterialSolid, shellGroup);
+        }
+
+        /* -------------------------------------------------------------
+           6. STRUCTURAL EXOSKELETON PORTAL RIBS
+        ------------------------------------------------------------- */
+        function buildStructuralExoskeleton() {
+            const portalGridsX = [
+                -27, -23.5, -20, -16.5, -13, -9.5, -6, -2.5, 1, 4.5, 8, 11.5, 15, 18.5, 22, 25.5, 27.5
+            ];
+
+            portalGridsX.forEach(px => {
+                const ribGroup = new THREE.Group();
+                ribGroup.position.set(px, 0, 0);
+
+                const isCantileverBay = px > 5.5;
+
+                if (!isCantileverBay) {
+                    const braceLeft = createBox(0.24, 0.28, 4.2, 0, 4.3, -9.0, materials.steelExoskeleton, ribGroup);
+                    braceLeft.rotation.x = -0.78;
+
+                    const braceRight = createBox(0.24, 0.28, 4.2, 0, 4.3, 9.0, materials.steelExoskeleton, ribGroup);
+                    braceRight.rotation.x = 0.78;
+                } else {
+                    createBox(0.24, 0.45, 22.0, 0, 5.7, 0, materials.steelExoskeleton, ribGroup);
+                }
+
+                createBox(0.24, 3.2, 0.35, 0, 7.4, -10.85, materials.steelExoskeleton, ribGroup);
+                createBox(0.24, 3.2, 0.35, 0, 7.4, 10.85, materials.steelExoskeleton, ribGroup);
+
+                const rafterLeft = createBox(0.24, 0.28, 3.8, 0, 9.0, -9.6, materials.steelExoskeleton, ribGroup);
+                rafterLeft.rotation.x = 0.45;
+
+                const rafterRight = createBox(0.24, 0.28, 3.8, 0, 9.0, 9.6, materials.steelExoskeleton, ribGroup);
+                rafterRight.rotation.x = -0.45;
+
+                createBox(0.24, 0.35, 16.5, 0, 9.25, 0, materials.steelExoskeleton, ribGroup);
+
+                portalGroup.add(ribGroup);
+            });
+        }
+
+        /* -------------------------------------------------------------
+           7. INTERACTIVE ROOM HIGHLIGHT BOXES & IOT SENSORS
+        ------------------------------------------------------------- */
+        function setupInteractivity() {
+            ROOM_DATABASE.forEach(room => {
+                const b = room.bounds;
+                const w = b.maxX - b.minX;
+                const d = b.maxZ - b.minZ;
+                const cx = (b.minX + b.maxX) / 2;
+                const cz = (b.minZ + b.maxZ) / 2;
+                const cy = b.y + b.h / 2;
+
+                const hitGeo = new THREE.BoxGeometry(w, b.h, d);
+                const hitMat = new THREE.MeshBasicMaterial({
+                    color: room.color,
+                    transparent: true,
+                    opacity: 0.1,
+                    depthWrite: false
+                });
+
+                const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+                hitMesh.position.set(cx, cy, cz);
+                hitMesh.userData = { room: room };
+                hitMesh.visible = true;
+
+                const wireGeo = new THREE.EdgesGeometry(hitGeo);
+                const wireMat = new THREE.LineBasicMaterial({
+                    color: room.color,
+                    transparent: true,
+                    opacity: 0.4,
+                    linewidth: 2
+                });
+                const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
+                hitMesh.add(wireMesh);
+                hitMesh.wireframe = wireMesh;
+
+                if (room.floor === 'L1') level1Group.add(hitMesh);
+                else if (room.floor === 'L2') level2Group.add(hitMesh);
+                else if (room.floor === 'L3') level3Group.add(hitMesh);
+
+                interactiveRooms.push(hitMesh);
+            });
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('click', onPointerClick);
+        }
+
+        function buildIoTSensorNodes() {
+            ROOM_DATABASE.forEach(room => {
+                const b = room.bounds;
+                const cx = (b.minX + b.maxX) / 2;
+                const cz = (b.minZ + b.maxZ) / 2;
+                const cy = b.y + b.h - 0.3;
+
+                const pinGroup = new THREE.Group();
+                pinGroup.position.set(cx, cy, cz);
+
+                const sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.28, 16, 16),
+                    new THREE.MeshBasicMaterial({ color: room.color })
+                );
+                pinGroup.add(sphere);
+
+                const beam = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.02, 0.02, 1.4, 8),
+                    new THREE.MeshBasicMaterial({ color: room.color, transparent: true, opacity: 0.55 })
+                );
+                beam.position.y = 0.7;
+                pinGroup.add(beam);
+
+                pinGroup.userData = { initialY: cy, pulseOffset: Math.random() * Math.PI * 2 };
+
+                if (room.floor === 'L1') level1Group.add(pinGroup);
+                else if (room.floor === 'L2') level2Group.add(pinGroup);
+                else if (room.floor === 'L3') level3Group.add(pinGroup);
+
+                sensorsGroup.add(pinGroup);
+            });
+        }
+
+        /* -------------------------------------------------------------
+           8. INTERACTION HANDLERS & RAYCASTING
+        ------------------------------------------------------------- */
+        function onPointerMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveRooms, false);
+
+            const tooltip = document.getElementById('room-tooltip');
+
+            if (intersects.length > 0) {
+                const target = intersects[0].object;
+                if (hoveredRoom !== target) {
+                    if (hoveredRoom && hoveredRoom !== selectedRoom) {
+                        hoveredRoom.material.opacity = 0.1;
+                        hoveredRoom.wireframe.material.opacity = 0.4;
+                    }
+                    hoveredRoom = target;
+                    hoveredRoom.material.opacity = 0.32;
+                    hoveredRoom.wireframe.material.opacity = 1.0;
+                    document.body.style.cursor = 'pointer';
+                }
+
+                const room = target.userData.room;
+                tooltip.innerHTML = `<strong>${room.name}</strong><br><span style="color:#${room.color.toString(16).padStart(6,'0')}; font-family:var(--font-mono); font-size:10px;">${room.badge}</span>`;
+                tooltip.style.left = `${event.clientX}px`;
+                tooltip.style.top = `${event.clientY - 10}px`;
+                tooltip.style.opacity = '1';
+            } else {
+                if (hoveredRoom && hoveredRoom !== selectedRoom) {
+                    hoveredRoom.material.opacity = 0.1;
+                    hoveredRoom.wireframe.material.opacity = 0.4;
+                }
+                hoveredRoom = null;
+                document.body.style.cursor = 'default';
+                tooltip.style.opacity = '0';
+            }
+        }
+
+        function onPointerClick(event) {
+            if (event.clientX < 315 || event.clientY < 80 || event.clientX > window.innerWidth - 350) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveRooms, false);
+
+            if (intersects.length > 0) {
+                selectRoom(intersects[0].object.userData.room, intersects[0].object);
+            }
+        }
+
+        function selectRoom(roomData, meshObject) {
+            if (selectedRoom && selectedRoom !== meshObject) {
+                selectedRoom.material.opacity = 0.1;
+                selectedRoom.wireframe.material.opacity = 0.4;
+            }
+
+            selectedRoom = meshObject;
+            selectedRoom.material.opacity = 0.45;
+            selectedRoom.wireframe.material.opacity = 1.0;
+
+            document.getElementById('inspect-name').textContent = roomData.name;
+            const badgeElem = document.getElementById('inspect-level');
+            badgeElem.textContent = roomData.badge;
+            badgeElem.className = `inspector-badge ${roomData.badgeClass || 'badge-live'}`;
+
+            document.getElementById('inspect-desc').textContent = roomData.desc;
+            document.getElementById('inspect-temp').textContent = roomData.stats.temp;
+            document.getElementById('inspect-humidity').textContent = roomData.stats.humidity;
+            document.getElementById('inspect-co2').textContent = roomData.stats.co2;
+            document.getElementById('inspect-power').textContent = roomData.stats.power;
+
+            document.getElementById('inspector-panel').classList.add('open');
+
+            animateCamera(roomData.cam.pos, roomData.cam.target, 1200);
+        }
+
+        function closeInspector() {
+            document.getElementById('inspector-panel').classList.remove('open');
+            if (selectedRoom) {
+                selectedRoom.material.opacity = 0.1;
+                selectedRoom.wireframe.material.opacity = 0.4;
+                selectedRoom = null;
+            }
+        }
+
+        function focusInspectedRoom() {
+            if (selectedRoom) {
+                const room = selectedRoom.userData.room;
+                animateCamera(room.cam.pos, room.cam.target, 1000);
+            }
+        }
+
+        /* -------------------------------------------------------------
+           9. CAMERA CONTROLS & EXPLODED VIEW ANIMATION
+        ------------------------------------------------------------- */
+        function animateCamera(targetPos, targetLookAt, duration = 1200) {
+            new TWEEN.Tween(camera.position)
+                .to(targetPos, duration)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .start();
+
+            new TWEEN.Tween(controls.target)
+                .to(targetLookAt, duration)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .start();
+        }
+
+        function focusCameraPreset(preset) {
+            closeInspector();
+            switch (preset) {
+                case 'overview':
+                    animateCamera({ x: 54, y: 30, z: 56 }, { x: 0, y: 6, z: 0 });
+                    break;
+                case 'generator':
+                    animateCamera({ x: -24, y: 7.5, z: 18 }, { x: -20, y: 4.2, z: 6.8 });
+                    break;
+                case 'communication':
+                    animateCamera({ x: -3, y: 18, z: 16 }, { x: -2, y: 11.5, z: 0 });
+                    break;
+                case 'sensors':
+                    animateCamera({ x: 8, y: 7.5, z: -18 }, { x: 8, y: 4.2, z: -5.8 });
+                    break;
+                case 'fuel':
+                    animateCamera({ x: -33, y: 8.5, z: 6 }, { x: -20, y: 3.4, z: 0 });
+                    break;
+                case 'water':
+                    animateCamera({ x: -24, y: 7.5, z: -18 }, { x: -20, y: 4.2, z: -6.8 });
+                    break;
+            }
+        }
+
+        function onExplodeChange(val) {
+            explodeProgress = val / 100;
+            document.getElementById('explode-val').textContent = `${val}%`;
+
+            const l2Offset = explodeProgress * 12;
+            const l3Offset = explodeProgress * 24;
+            const shellOffset = explodeProgress * 32;
+
+            level2Group.position.y = l2Offset;
+            level3Group.position.y = l3Offset;
+
+            shellGroup.position.y = shellOffset;
+            portalGroup.position.y = shellOffset * 0.95;
+
+            shellGroup.scale.set(
+                1 + explodeProgress * 0.22,
+                1 + explodeProgress * 0.22,
+                1 + explodeProgress * 0.22
+            );
+            portalGroup.scale.set(
+                1 + explodeProgress * 0.22,
+                1 + explodeProgress * 0.22,
+                1 + explodeProgress * 0.22
+            );
+        }
+
+        function setFloorLevel(level) {
+            currentFloor = level;
+
+            document.querySelectorAll('.floor-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('explode-slider').value = 0;
+            onExplodeChange(0);
+
+            if (level === 'all') {
+                level1Group.visible = true;
+                level2Group.visible = true;
+                level3Group.visible = true;
+                stiltsGroup.visible = true;
+                portalGroup.visible = true;
+                animateCamera({ x: 54, y: 30, z: 56 }, { x: 0, y: 6, z: 0 });
+            } else if (level === 'L1') {
+                level1Group.visible = true;
+                level2Group.visible = false;
+                level3Group.visible = false;
+                stiltsGroup.visible = true;
+                portalGroup.visible = false;
+                animateCamera({ x: 0, y: 28, z: 30 }, { x: -4, y: 4, z: 0 });
+            } else if (level === 'L2') {
+                level1Group.visible = false;
+                level2Group.visible = true;
+                level3Group.visible = false;
+                stiltsGroup.visible = false;
+                portalGroup.visible = false;
+                animateCamera({ x: 6, y: 30, z: 32 }, { x: 2, y: 7.2, z: 0 });
+            } else if (level === 'L3') {
+                level1Group.visible = false;
+                level2Group.visible = false;
+                level3Group.visible = true;
+                stiltsGroup.visible = false;
+                portalGroup.visible = false;
+                animateCamera({ x: -2, y: 22, z: 18 }, { x: -2, y: 10.5, z: 0 });
+            }
+        }
+
+        function setShellMode(mode) {
+            currentShellMode = mode;
+            document.querySelectorAll('#controls-panel .btn-grid:first-of-type .btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (mode === 'exterior') {
+                shellGroup.visible = true;
+                portalGroup.visible = true;
+                shellGroup.traverse(child => {
+                    if (child.isMesh && child.material !== materials.polarGlass) {
+                        child.material = shellMaterialSolid;
+                    }
+                });
+            } else if (mode === 'interior') {
+                shellGroup.visible = false;
+                portalGroup.visible = false;
+            }
+        }
+
+        function toggleIoTPins() {
+            showIoTPins = !showIoTPins;
+            sensorsGroup.visible = showIoTPins;
+            const dot = document.getElementById('pins-status-dot');
+            dot.style.background = showIoTPins ? 'var(--accent-green)' : 'var(--text-secondary)';
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /* -------------------------------------------------------------
+           10. LIVE TELEMETRY SIMULATION & SPARKLINE CHARTS
+        ------------------------------------------------------------- */
+        function initTelemetrySimulation() {
+            const tempCanvas = document.getElementById('temp-sparkline');
+            const strainCanvas = document.getElementById('strain-sparkline');
+
+            const tempData = Array.from({ length: 30 }, () => 21.0 + Math.random() * 1.5);
+            const strainData = Array.from({ length: 30 }, () => 12.0 + Math.random() * 8.0);
+
+            function drawSparkline(canvas, data, strokeColor, fillColor) {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const min = Math.min(...data) * 0.95;
+                const max = Math.max(...data) * 1.05;
+                const step = w / (data.length - 1);
+
+                ctx.beginPath();
+                data.forEach((val, i) => {
+                    const x = i * step;
+                    const y = h - ((val - min) / (max - min)) * (h - 8) - 4;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.lineTo(w, h);
+                ctx.lineTo(0, h);
+                ctx.closePath();
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+            }
+
+            setInterval(() => {
+                tempData.shift();
+                tempData.push(21.2 + (Math.random() - 0.5) * 1.2);
+                drawSparkline(tempCanvas, tempData, '#00e5ff', 'rgba(0, 229, 255, 0.15)');
+
+                strainData.shift();
+                strainData.push(14.0 + (Math.random() - 0.5) * 6.0);
+                drawSparkline(strainCanvas, strainData, '#00e676', 'rgba(0, 230, 118, 0.15)');
+            }, 1000);
+        }
+
+        /* -------------------------------------------------------------
+           11. ANIMATION LOOP (INCLUDES ANEMOMETER SPIN & BEACON FLASH)
+        ------------------------------------------------------------- */
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            // Slow-mode wind particles motion
+            if (snowSystem) {
+                const positions = snowSystem.geometry.attributes.position.array;
+                const vels = snowSystem.geometry.userData.velocities;
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i]     += vels[i];
+                    positions[i + 1] += vels[i + 1];
+                    positions[i + 2] += vels[i + 2];
+
+                    // Gentle boundary recycling
+                    if (positions[i + 1] < -2.0) positions[i + 1] = 52.0;
+                    if (positions[i] < -110.0)   positions[i] = 110.0;
+                    if (positions[i + 2] > 110.0) positions[i + 2] = -110.0;
+                }
+                snowSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            // Rotate Anemometer Cups based on wind speed
+            if (anemometerHead) {
+                anemometerHead.rotation.y = time * 0.006;
+            }
+
+            // Pulsate red obstruction beacon light
+            if (beaconLight) {
+                const flash = Math.sin(time * 0.005);
+                beaconLight.material.color.setHex(flash > 0.2 ? 0xff1744 : 0x550510);
+            }
+
+            if (showIoTPins && sensorsGroup) {
+                sensorsGroup.children.forEach(pin => {
+                    if (pin.userData) {
+                        const t = (time * 0.003) + pin.userData.pulseOffset;
+                        pin.position.y = pin.userData.initialY + Math.sin(t) * 0.14;
+                    }
+                });
+            }
+
+            const compass = document.getElementById('compass-gizmo');
+            if (compass) {
+                const angle = controls.getAzimuthalAngle();
+                compass.style.transform = `rotate(${angle * (180 / Math.PI)}deg)`;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
