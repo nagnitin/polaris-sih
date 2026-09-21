@@ -16,7 +16,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import PolarisLogin from "./pages/PolarisLogin";
 
-import { PolarisProvider, usePolaris } from "./context/PolarisContext";
+import { PolarisProvider, usePolaris, ROLES } from "./context/PolarisContext";
 import { stationProfiles } from "./data/stationProfiles";
 
 /* Rolling station-level health series for the dashboard bar chart. */
@@ -162,15 +162,20 @@ export default function App() {
   if (!user) {
     return (
       <PolarisLogin
-        onLogin={(username) =>
-          setUser({ name: username, role: "operations" })
+        onLogin={({ username, role, station }) =>
+          setUser({
+            name: username,
+            role,
+            roleLabel: ROLES[role]?.label || role,
+            station,
+          })
         }
       />
     );
   }
 
   return (
-    <PolarisProvider user={user}>
+    <PolarisProvider user={user} initialStation={user.station}>
       <Shell onLogout={() => setUser(null)} />
     </PolarisProvider>
   );

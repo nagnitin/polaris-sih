@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+
+import { ROLES } from "../context/PolarisContext";
 
 /* Station photography and logos are bundled as real image assets so
    Vite can cache them separately instead of inlining ~9 MB of base64. */
@@ -27,106 +29,56 @@ const IMG_ANTMAP = IMPORTED_IMG_ANTMAP;
 
 const STATIONS = [
   {
-    id: "maitri", name: "Maitri", fullName: "Maitri Station",
-    location: "Queen Maud Land · 70°46'S 11°44'E",
-    photo: "MAITRI_STATION", bg: "BG_MAITRI",
-    temp: "−18 °C", wind: "10 kts · NE", power: "Optimal", status: "Operational",
-    mmCx: 44, mmCy: 50,
-  },
-  {
     id: "bharati", name: "Bharati", fullName: "Bharati Station",
-    location: "Larsemann Hills · 69°24'S 76°11'E",
+    region: "East Antarctica (Larsemann Hills)",
+    coords: "69°24'S, 76°11'E",
+    location: "LARSEMANN HILLS · 69°24'S 76°11'E",
     photo: "BHARATI_STATION", bg: "BG_BHARATI",
     temp: "−10 °C", wind: "22 kts · E", power: "Optimal", status: "Operational",
-    mmCx: 61, mmCy: 65,
+  },
+  {
+    id: "maitri", name: "Maitri", fullName: "Maitri Station",
+    region: "Antarctica (Schirmacher Oasis)",
+    coords: "70°46'S, 11°44'E",
+    location: "QUEEN MAUD LAND · 70°46'S 11°44'E",
+    photo: "MAITRI_STATION", bg: "BG_MAITRI",
+    temp: "−18 °C", wind: "10 kts · NE", power: "Optimal", status: "Operational",
   },
 ];
 
-function Minimap({ activeId }) {
+function Chip({ pip, label, value }) {
   return (
-    <svg viewBox="0 0 100 100" width="76" height="76">
-      <ellipse cx="50" cy="55" rx="39" ry="36" fill="#b8d0de" opacity="0.45" />
-      <polygon
-        points="50,18 63,34 82,44 72,56 77,72 61,66 50,82 39,66 23,72 28,56 18,44 37,34"
-        fill="#c5dce8" opacity="0.82"
-      />
-      {STATIONS.map((s) => {
-        const on = s.id === activeId;
-        return (
-          <g key={s.id}>
-            <circle cx={s.mmCx} cy={s.mmCy} r={on ? 4.5 : 3}
-              fill={on ? "#e8600a" : "rgba(232,96,10,0.28)"}
-              style={{ transition: "all 0.4s" }} />
-            <text x={s.mmCx - (s.id === "maitri" ? 18 : 1)} y={s.mmCy - 7}
-              fontSize="6.2" fontWeight="700"
-              fill={on ? "#e8600a" : "rgba(232,96,10,0.38)"}
-              style={{ transition: "fill 0.4s" }}>
-              {s.name}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function MetricRow({ pip, label, value }) {
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-      <div style={{ width:5, height:5, borderRadius:"50%", background:pip, flexShrink:0 }} />
-      <span style={{ fontSize:12.5, color:"rgba(255,255,255,0.82)" }}>
-        <span style={{ color:"rgba(255,255,255,0.45)", fontSize:11, marginRight:3 }}>{label}:</span>
-        {value}
-      </span>
+    <div className="pl-chip">
+      <span className="pl-chip-pip" style={{ background: pip }} />
+      <span className="pl-chip-label">{label}</span>
+      <span className="pl-chip-val">{value}</span>
     </div>
   );
 }
 
-// Tiny reusable style helpers
-const S = {
-  btn: (active) => ({
-    background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    color: "rgba(255,255,255,0.65)", width:26, height:26, borderRadius:"50%",
-    cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center",
-  }),
-};
-
 export default function PolarisLogin({ onLogin }) {
-  const [cur, setCur] = useState(0);
-  const [fade, setFade] = useState(true);
+  const [cur, setCur] = useState("maitri");
+  const [role, setRole] = useState("operations");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [uFocus, setUFocus] = useState(false);
   const [pFocus, setPFocus] = useState(false);
-
-  const st = STATIONS[cur];
-
-  useEffect(() => {
-    const t = setInterval(() => slide((cur + 1) % STATIONS.length), 7000);
-    return () => clearInterval(t);
-  }, [cur]);
-
-  function slide(idx) {
-    if (idx === cur) return;
-    setFade(false);
-    setTimeout(() => { setCur(idx); setFade(true); }, 380);
-  }
+  const [rFocus, setRFocus] = useState(false);
 
   function handleLogin(e) {
     e.preventDefault();
     if (!username || !password) { alert("Please enter your credentials."); return; }
     // Prototype auth: any non-empty credentials are accepted.
     // Replace with institutional SSO (OAuth2 / OIDC) + MFA before real use.
-    if (onLogin) onLogin(username);
+    if (onLogin) onLogin({ username, role, station: cur });
   }
 
   const inputStyle = (focused) => ({
-    width:"100%", padding:"12px 38px 12px 38px",
+    width:"100%", padding:"clamp(14px, 1.1vw, 17px) 40px",
     border: `1.5px solid ${focused ? "#e8600a" : "#e3e3e3"}`,
-    borderRadius:10, fontSize:13.5, color:"#222", background: focused ? "#fff" : "#f9f9f9",
+    borderRadius:12, fontSize:"clamp(15.5px, 1.1vw, 17px)", color:"#222", background: focused ? "#fff" : "#f9f9f9",
     outline:"none", fontFamily:"inherit", transition:"border-color 0.18s, background 0.18s",
   });
 
@@ -137,12 +89,12 @@ export default function PolarisLogin({ onLogin }) {
       overflow:"hidden", background:"#000",
     }}>
       {/* ── Backgrounds ── */}
-      {STATIONS.map((s, i) => (
+      {STATIONS.map((s) => (
         <div key={s.id} style={{
           position:"absolute", inset:0,
           backgroundImage:`url(${IMG[s.bg]})`,
           backgroundSize:"cover", backgroundPosition:"center",
-          opacity: i === cur ? 1 : 0,
+          opacity: s.id === cur ? 1 : 0,
           transition:"opacity 1.3s cubic-bezier(0.4,0,0.2,1)", zIndex:0,
         }} />
       ))}
@@ -152,7 +104,7 @@ export default function PolarisLogin({ onLogin }) {
       }} />
 
       {/* ── Top bar ── */}
-      <header style={{
+      <header className="pl-topbar" style={{
         position:"fixed", top:0, left:0, right:0, zIndex:200,
         height:70,
         background:"#0c1526",
@@ -163,7 +115,7 @@ export default function PolarisLogin({ onLogin }) {
       }}>
 
         {/* ── Logo band with diagonal right clip ── */}
-        <div style={{
+        <div className="pl-logoband" style={{
           display:"flex", alignItems:"center",
           background:"#152040",
           clipPath:"polygon(0 0, calc(100% - 28px) 0, 100% 100%, 0 100%)",
@@ -175,7 +127,7 @@ export default function PolarisLogin({ onLogin }) {
           <div style={{ display:"flex", alignItems:"center", gap:9, padding:"0 14px 0 4px" }}>
             <img src={IMG.LOGO_SIH} alt="SIH 2026"
               style={{ height:40, width:"auto", objectFit:"contain", display:"block" }} />
-            <div style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
+            <div className="pl-hide-sm" style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
               <span style={{ fontSize:11.5, fontWeight:700, color:"rgba(255,255,255,0.88)", whiteSpace:"nowrap" }}>Smart India</span>
               <span style={{ fontSize:11.5, fontWeight:700, color:"rgba(255,255,255,0.88)", whiteSpace:"nowrap" }}>Hackathon</span>
               <span style={{ fontSize:11.5, fontWeight:700, color:"rgba(255,255,255,0.88)", whiteSpace:"nowrap" }}>2026</span>
@@ -183,10 +135,10 @@ export default function PolarisLogin({ onLogin }) {
           </div>
 
           {/* Sep */}
-          <div style={{ width:1, height:42, background:"rgba(255,255,255,0.16)", flexShrink:0, alignSelf:"center" }} />
+          <div className="pl-hide-md" style={{ width:1, height:42, background:"rgba(255,255,255,0.16)", flexShrink:0, alignSelf:"center" }} />
 
           {/* MoES */}
-          <div style={{ display:"flex", alignItems:"center", gap:9, padding:"0 14px" }}>
+          <div className="pl-hide-md" style={{ display:"flex", alignItems:"center", gap:9, padding:"0 14px" }}>
             <img src={IMG.LOGO_MOES} alt="Ministry of Earth Sciences"
               style={{ height:38, width:"auto", objectFit:"contain", display:"block" }} />
             <div style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
@@ -197,10 +149,10 @@ export default function PolarisLogin({ onLogin }) {
           </div>
 
           {/* Sep */}
-          <div style={{ width:1, height:42, background:"rgba(255,255,255,0.16)", flexShrink:0, alignSelf:"center" }} />
+          <div className="pl-hide-md" style={{ width:1, height:42, background:"rgba(255,255,255,0.16)", flexShrink:0, alignSelf:"center" }} />
 
           {/* NCPOR — logo only, text is already inside the circular logo badge */}
-          <div style={{ display:"flex", alignItems:"center", padding:"0 4px 0 14px" }}>
+          <div className="pl-hide-md" style={{ display:"flex", alignItems:"center", padding:"0 4px 0 14px" }}>
             <img src={IMG.LOGO_NCPOR} alt="NCPOR"
               style={{ height:44, width:"auto", objectFit:"contain", display:"block" }} />
           </div>
@@ -209,8 +161,8 @@ export default function PolarisLogin({ onLogin }) {
 
         {/* ── Title ── */}
         <div style={{ flex:1, display:"flex", alignItems:"center", padding:"0 24px", minWidth:0 }}>
-          <span style={{
-            fontSize:18.5, fontWeight:600,
+          <span className="pl-apptitle" style={{
+            fontSize:20, fontWeight:600,
             color:"rgba(255,255,255,0.93)", letterSpacing:0.1,
             whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
           }}>
@@ -221,164 +173,73 @@ export default function PolarisLogin({ onLogin }) {
       </header>
 
       {/* ── Body ── */}
-      <div style={{
+      <div className="pl-body" style={{
         position:"fixed", inset:0, zIndex:10,
-        display:"flex", alignItems:"center", justifyContent:"center",
-        padding:"80px 48px 48px", gap:28,
       }}>
 
-        {/* Station card */}
-        <div style={{
-          width:440, flexShrink:0,
-          background:"rgba(255,255,255,0.075)",
-          backdropFilter:"blur(22px)", WebkitBackdropFilter:"blur(22px)",
-          border:"1px solid rgba(255,255,255,0.14)",
-          borderRadius:16, overflow:"hidden",
-          boxShadow:"0 28px 70px rgba(0,0,0,0.56), 0 1px 0 rgba(255,255,255,0.09) inset",
-        }}>
-
-          {/* Photo */}
-          <div style={{ position:"relative", width:"100%", height:232, overflow:"hidden" }}>
-            {STATIONS.map((s, i) => (
-              <img key={s.id} src={IMG[s.photo]} alt={s.fullName}
-                style={{
-                  position:"absolute", inset:0, width:"100%", height:"100%",
-                  objectFit:"cover", objectPosition:"center",
-                  opacity: i === cur ? (fade ? 1 : 0) : 0,
-                  transition:"opacity 0.85s ease",
-                }} />
-            ))}
-            <div style={{
-              position:"absolute", bottom:0, left:0, right:0, height:90,
-              background:"linear-gradient(transparent,rgba(0,0,0,0.68))",
-              zIndex:1, pointerEvents:"none",
-            }} />
-            <div style={{
-              position:"absolute", bottom:12, left:15, zIndex:2,
-              fontSize:9.5, fontWeight:700, letterSpacing:1.2,
-              color:"rgba(255,255,255,0.52)", textTransform:"uppercase",
-              opacity: fade ? 1 : 0, transition:"opacity 0.4s",
-            }}>
-              {st.location}
-            </div>
+        {/* ── Station twin picker ── */}
+        <div className="pl-picker">
+          <div className="pl-picker-head">
+            Choose your station twin <span>(Access &amp; Management)</span>
           </div>
 
-          {/* Metrics strip */}
-          <div style={{ display:"flex", borderBottom:"1px solid rgba(255,255,255,0.07)" }}>
-            <div style={{ flex:1, padding:"12px 16px" }}>
-              <div style={{
-                fontSize:8.5, fontWeight:700, letterSpacing:1.1,
-                color:"rgba(255,255,255,0.34)", textTransform:"uppercase", marginBottom:8,
-                opacity: fade ? 1 : 0, transition:"opacity 0.4s",
-              }}>
-                Current Station Metrics ({st.name.toUpperCase()})
-              </div>
-              <div style={{ opacity: fade ? 1 : 0, transition:"opacity 0.4s" }}>
-                <MetricRow pip="#5ab4d8" label="Temperature" value={st.temp} />
-                <MetricRow pip="#6ecfa8" label="Wind"        value={st.wind} />
-                <MetricRow pip="#f0b429" label="Power"       value={st.power} />
-                <MetricRow pip="#a78bfa" label="Status"      value={st.status} />
-              </div>
-            </div>
-            {/* Real Antarctica map — click to enlarge */}
-            <div
-              onClick={() => setMapOpen(true)}
-              title="Click to view full map"
-              style={{
-                width:120, flexShrink:0,
-                borderLeft:"1px solid rgba(255,255,255,0.07)",
-                background:"rgba(0,0,0,0.18)",
-                display:"flex", flexDirection:"column",
-                alignItems:"center", justifyContent:"center",
-                padding:"8px 6px", gap:4,
-                cursor:"pointer",
-                position:"relative",
-                transition:"background 0.2s",
-              }}
-              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.08)"}
-              onMouseLeave={e => e.currentTarget.style.background="rgba(0,0,0,0.18)"}
-            >
-              <div style={{ position:"relative", width:"100%", textAlign:"center" }}>
-                <img
-                  src={IMG_ANTMAP}
-                  alt="Antarctica Map"
-                  style={{
-                    width:"100%", height:86,
-                    objectFit:"cover", objectPosition:"center",
-                    borderRadius:4,
-                    display:"block",
+          <div className="pl-picker-cards">
+            {STATIONS.map((s) => {
+              const active = cur === s.id;
+              return (
+                <div
+                  key={s.id}
+                  className={`pl-station${active ? " is-active" : ""}`}
+                  onClick={() => setCur(s.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCur(s.id); }
                   }}
-                />
-                {/* Station dots overlay */}
-                <div style={{
-                  position:"absolute", inset:0,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                }}>
-                  {/* Maitri pin - top center-right area */}
-                  {STATIONS.map(s => (
-                    <div key={s.id} style={{
-                      position:"absolute",
-                      left: s.id==="maitri" ? "57%" : "72%",
-                      top:  s.id==="maitri" ? "22%" : "48%",
-                      transform:"translate(-50%,-50%)",
-                    }}>
-                      <div style={{
-                        width: s.id===st.id ? 7 : 5,
-                        height: s.id===st.id ? 7 : 5,
-                        borderRadius:"50%",
-                        background: s.id===st.id ? "#e8600a" : "rgba(232,96,10,0.45)",
-                        border: s.id===st.id ? "1.5px solid #fff" : "1px solid rgba(255,255,255,0.4)",
-                        boxShadow: s.id===st.id ? "0 0 5px rgba(232,96,10,0.8)" : "none",
-                        transition:"all 0.4s",
-                      }} />
-                    </div>
-                  ))}
-                </div>
-                {/* Zoom hint icon */}
-                <div style={{
-                  position:"absolute", top:3, right:3,
-                  background:"rgba(0,0,0,0.55)", borderRadius:3,
-                  padding:"2px 4px", fontSize:9,
-                  color:"rgba(255,255,255,0.7)", lineHeight:1,
-                }}>⤢</div>
-              </div>
-              <span style={{
-                fontSize:9, color:"rgba(255,255,255,0.38)", letterSpacing:0.4,
-                textTransform:"uppercase", fontWeight:600,
-              }}>Click to expand</span>
-            </div>
-          </div>
+                >
+                  <div className="pl-station-photo">
+                    <img src={IMG[s.photo]} alt={s.fullName} />
+                    <div className="pl-station-locband">{s.location}</div>
+                  </div>
 
-          {/* Nav */}
-          <div style={{
-            display:"flex", alignItems:"center", justifyContent:"space-between",
-            padding:"9px 14px 6px",
-          }}>
-            <button onClick={() => slide((cur - 1 + STATIONS.length) % STATIONS.length)}
-              style={S.btn(false)}>&#8592;</button>
-            <span style={{
-              fontSize:10.5, fontWeight:700, letterSpacing:0.9,
-              color:"rgba(255,255,255,0.48)", textTransform:"uppercase",
-            }}>{st.fullName}</span>
-            <button onClick={() => slide((cur + 1) % STATIONS.length)}
-              style={S.btn(false)}>&#8594;</button>
-          </div>
-          <div style={{ display:"flex", gap:6, padding:"0 14px 11px" }}>
-            {STATIONS.map((_, i) => (
-              <button key={i} onClick={() => slide(i)} style={{
-                height:3, borderRadius:2, border:"none", outline:"none", cursor:"pointer", padding:0,
-                background: i === cur ? "#e8600a" : "rgba(255,255,255,0.2)",
-                width: i === cur ? 32 : 22, transition:"all 0.3s",
-              }} />
-            ))}
+                  <div className="pl-station-body">
+                    <div className="pl-station-headrow">
+                      <div style={{ minWidth:0 }}>
+                        <div className="pl-station-name">{s.fullName}</div>
+                        <div className="pl-station-loc">{s.region}</div>
+                        <div className="pl-station-coords">{s.coords}</div>
+                      </div>
+                      <img
+                        className="pl-station-map"
+                        src={IMG_ANTMAP}
+                        alt="Antarctica map"
+                        title="Click to view full map"
+                        onClick={(e) => { e.stopPropagation(); setMapOpen(true); }}
+                      />
+                    </div>
+
+                    <div className="pl-chip-grid">
+                      <Chip pip="#5ab4d8" label="Temp:"  value={s.temp} />
+                      <Chip pip="#6ecfa8" label="Wind:"  value={s.wind} />
+                      <Chip pip="#f0b429" label="Power:" value={s.power} />
+                      <Chip pip="#a78bfa" label="Status:" value={s.status} />
+                    </div>
+
+                    <div className={`pl-station-cta${active ? " is-active" : ""}`}>
+                      {active ? "✓ Selected twin" : `Select ${s.name} twin`}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* ── Login panel ── */}
-        <div style={{
-          width:348, flexShrink:0,
+        <div className="pl-panel" style={{
+          flexShrink:0,
           background:"rgba(255,255,255,0.97)",
-          borderRadius:16, padding:"34px 30px 30px",
+          borderRadius:16, padding:"clamp(34px, 2.6vw, 46px) clamp(34px, 2.6vw, 46px) clamp(30px, 2.2vw, 40px)",
           boxShadow:"0 32px 80px rgba(0,0,0,0.62), 0 1px 0 rgba(255,255,255,0.5) inset",
           display:"flex", flexDirection:"column",
         }}>
@@ -386,29 +247,71 @@ export default function PolarisLogin({ onLogin }) {
           <div style={{
             alignSelf:"center", display:"flex", alignItems:"center", gap:5,
             background:"#edfaf2", border:"1px solid #a8e6c0",
-            borderRadius:20, padding:"4px 12px", marginBottom:18,
-            fontSize:10.5, fontWeight:600, color:"#1a7a3c",
+            borderRadius:20, padding:"6px 14px", marginBottom:16,
+            fontSize:13, fontWeight:600, color:"#1a7a3c",
           }}>
             <div style={{
-              width:6, height:6, borderRadius:"50%", background:"#22c55e",
+              width:7, height:7, borderRadius:"50%", background:"#22c55e",
               animation:"blink 1.6s infinite",
             }} />
             All Systems Operational
           </div>
 
           <h1 style={{
-            fontSize:22, fontWeight:700, color:"#111",
-            textAlign:"center", marginBottom:5, letterSpacing:-0.2,
+            fontSize:"clamp(27px, 2vw, 34px)", fontWeight:700, color:"#111",
+            textAlign:"center", marginBottom:6, letterSpacing:-0.2,
           }}>Secure Portal Login</h1>
-          <p style={{ fontSize:12.5, color:"#999", textAlign:"center", marginBottom:26 }}>
+          <p style={{ fontSize:"clamp(14px, 1vw, 16px)", color:"#999", textAlign:"center", marginBottom:22 }}>
             Network Access for authorized personnel
           </p>
+
+          {/* Role selector (RBAC) */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{
+              fontSize:10.5, fontWeight:700, letterSpacing:1.1, textTransform:"uppercase",
+              color:"#8a8a8a", marginBottom:6,
+            }}>
+              Sign in as <span style={{ color:"#e8600a" }}>(Role · RBAC)</span>
+            </div>
+            <div style={{ position:"relative" }}>
+              <span style={{
+                position:"absolute", left:13, top:"50%", transform:"translateY(-50%)",
+                fontSize:16, pointerEvents:"none", zIndex:1,
+              }}>{ROLES[role].icon}</span>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                onFocus={() => setRFocus(true)}
+                onBlur={() => setRFocus(false)}
+                aria-label="Sign in as role"
+                style={{
+                  ...inputStyle(rFocus),
+                  appearance:"none", WebkitAppearance:"none", MozAppearance:"none",
+                  padding:"13px 36px 13px 42px",
+                  cursor:"pointer", color:"#222",
+                }}
+              >
+                {Object.values(ROLES).map((r) => (
+                  <option key={r.id} value={r.id}>{r.label}</option>
+                ))}
+              </select>
+              <svg style={{
+                position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
+                pointerEvents:"none", opacity:0.4,
+              }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.4">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+            <div style={{ fontSize:12, color:"#999", marginTop:6, minHeight:15 }}>
+              {ROLES[role].desc}
+            </div>
+          </div>
 
           {/* Username field */}
           <div style={{ position:"relative", marginBottom:14 }}>
             <svg style={{
-              position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
-              width:16, height:16, opacity:0.33, pointerEvents:"none",
+              position:"absolute", left:13, top:"50%", transform:"translateY(-50%)",
+              width:18, height:18, opacity:0.33, pointerEvents:"none",
             }} viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
               <circle cx="12" cy="8" r="4"/>
               <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -417,15 +320,15 @@ export default function PolarisLogin({ onLogin }) {
               type="text" value={username} placeholder="Username" autoComplete="username"
               onChange={e => setUsername(e.target.value)}
               onFocus={() => setUFocus(true)} onBlur={() => setUFocus(false)}
-              style={{...inputStyle(uFocus), padding:"12px 14px 12px 38px"}}
+              style={{...inputStyle(uFocus), padding:"14px 14px 14px 42px"}}
             />
           </div>
 
           {/* Password field */}
           <div style={{ position:"relative", marginBottom:4 }}>
             <svg style={{
-              position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
-              width:16, height:16, opacity:0.33, pointerEvents:"none",
+              position:"absolute", left:13, top:"50%", transform:"translateY(-50%)",
+              width:18, height:18, opacity:0.33, pointerEvents:"none",
             }} viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -438,16 +341,16 @@ export default function PolarisLogin({ onLogin }) {
               style={inputStyle(pFocus)}
             />
             <button onClick={() => setShowPass(!showPass)} style={{
-              position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+              position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
               background:"none", border:"none", cursor:"pointer",
-              color:"#bbb", fontSize:13, lineHeight:1, padding:0,
+              color:"#bbb", fontSize:16, lineHeight:1, padding:0,
             }}>{showPass ? "●" : "○"}</button>
           </div>
 
           <button onClick={handleLogin} style={{
-            width:"100%", padding:13, marginTop:16,
-            background:"#e8600a", color:"#fff", border:"none", borderRadius:10,
-            fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+            width:"100%", padding:"clamp(15px, 1.2vw, 18px)", marginTop:14,
+            background:"#e8600a", color:"#fff", border:"none", borderRadius:12,
+            fontSize:"clamp(16px, 1.2vw, 18px)", fontWeight:700, cursor:"pointer", fontFamily:"inherit",
             boxShadow:"0 4px 16px rgba(232,96,10,0.30)", letterSpacing:0.2,
             transition:"background 0.2s",
           }}
@@ -458,7 +361,7 @@ export default function PolarisLogin({ onLogin }) {
           <div style={{ display:"flex", justifyContent:"space-between", marginTop:18 }}>
             {["Forgot Password?","Request Access"].map(t => (
               <a key={t} href="#" style={{
-                fontSize:12, color:"#aaa", textDecoration:"underline",
+                fontSize:13.5, color:"#aaa", textDecoration:"underline",
                 textUnderlineOffset:2,
               }}>{t}</a>
             ))}
@@ -512,14 +415,14 @@ export default function PolarisLogin({ onLogin }) {
                   <div style={{ textAlign:"center" }}>
                     <div style={{
                       fontSize:10, fontWeight:700, color:"#fff",
-                      background: s.id===st.id ? "#e8600a" : "rgba(60,60,60,0.85)",
+                      background: s.id===cur ? "#e8600a" : "rgba(60,60,60,0.85)",
                       padding:"2px 7px", borderRadius:4,
                       marginBottom:3, whiteSpace:"nowrap",
                       boxShadow:"0 2px 6px rgba(0,0,0,0.5)",
                     }}>{s.name} (India)</div>
                     <div style={{
                       width:10, height:10, borderRadius:"50%",
-                      background: s.id===st.id ? "#e8600a" : "#888",
+                      background: s.id===cur ? "#e8600a" : "#888",
                       border:"2px solid #fff",
                       margin:"0 auto",
                       boxShadow:"0 0 8px rgba(232,96,10,0.6)",
@@ -558,14 +461,8 @@ export default function PolarisLogin({ onLogin }) {
         </div>
       )}
 
-            {/* Star */}
-      <div style={{
-        position:"fixed", bottom:52, right:28, zIndex:20,
-        fontSize:26, color:"rgba(255,255,255,0.13)", userSelect:"none",
-      }}>&#10022;</div>
-
       {/* Footer */}
-      <footer style={{
+      <footer className="pl-footer" style={{
         position:"fixed", bottom:0, left:0, right:0, zIndex:200, height:40,
         background:"rgba(2,8,18,0.82)",
         backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)",
@@ -573,7 +470,7 @@ export default function PolarisLogin({ onLogin }) {
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"0 24px",
       }}>
-        <div style={{ display:"flex", gap:22 }}>
+        <div className="pl-footer-links" style={{ display:"flex", gap:22 }}>
           {["System Status","Help & Support","Privacy Policy"].map(t => (
             <a key={t} href="#" style={{
               fontSize:11.5, color:"rgba(255,255,255,0.38)", textDecoration:"none",
@@ -593,6 +490,108 @@ export default function PolarisLogin({ onLogin }) {
           50% { opacity:0.4; transform:scale(0.8); }
         }
         * { box-sizing:border-box; }
+
+        /* ── Layout: picker + panel ── */
+        .pl-body {
+          display:flex; flex-wrap:wrap;
+          align-items:center; justify-content:center;
+          gap:clamp(18px, 2vw, 40px); padding:76px 24px 40px;
+          overflow-y:auto; -webkit-overflow-scrolling:touch;
+        }
+        .pl-picker { width:min(960px, 54vw); display:flex; flex-direction:column; gap:clamp(14px, 1.2vw, 20px); }
+        .pl-picker-head {
+          font-size:clamp(14.5px, 1.05vw, 19px); font-weight:800; letter-spacing:1.8px; text-transform:uppercase;
+          color:rgba(255,255,255,0.92); text-shadow:0 2px 10px rgba(0,0,0,0.6);
+          padding-left:2px;
+        }
+        .pl-picker-head span { color:rgba(255,255,255,0.5); font-weight:600; letter-spacing:0.8px; text-transform:none; }
+        .pl-picker-cards { display:grid; grid-template-columns:1fr 1fr; gap:clamp(18px, 1.6vw, 28px); }
+        .pl-panel { width:min(570px, 36vw); min-width:340px; }
+        @media (max-width:1000px) {
+          .pl-picker { width:100%; }
+          .pl-panel { width:min(570px, 100%); min-width:0; }
+        }
+
+        .pl-station {
+          text-align:left; cursor:pointer; padding:0; color:inherit; font:inherit;
+          border:1px solid rgba(255,255,255,0.16);
+          border-radius:14px; overflow:hidden;
+          background:rgba(10,18,34,0.55);
+          backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+          transition:border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+        }
+        .pl-station:hover { transform:translateY(-2px); border-color:rgba(255,255,255,0.34); }
+        .pl-station:focus-visible { outline:2px solid #e8600a; outline-offset:2px; }
+        .pl-station.is-active {
+          border-color:#e8600a;
+          box-shadow:0 0 0 1.5px #e8600a, 0 18px 48px rgba(0,0,0,0.5);
+        }
+        .pl-station-photo { position:relative; height:clamp(170px, 16vw, 300px); overflow:hidden; }
+        .pl-station-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+        .pl-station-locband {
+          position:absolute; bottom:0; left:0; right:0;
+          padding:26px 16px 10px;
+          font-size:clamp(11px, 0.8vw, 14px); font-weight:700; letter-spacing:1.1px; text-transform:uppercase;
+          color:rgba(255,255,255,0.62);
+          background:linear-gradient(transparent, rgba(0,0,0,0.72));
+        }
+        .pl-station-body { padding:clamp(15px, 1.4vw, 24px); display:flex; flex-direction:column; gap:clamp(13px, 1.2vw, 18px); }
+        .pl-station-headrow { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+        .pl-station-name { font-size:clamp(19px, 1.45vw, 27px); font-weight:700; color:#fff; }
+        .pl-station-loc { font-size:clamp(13px, 0.95vw, 17px); color:rgba(255,255,255,0.62); margin-top:4px; }
+        .pl-station-coords { font-size:clamp(12.5px, 0.9vw, 16px); color:rgba(255,255,255,0.4); margin-top:2px; }
+        .pl-station-map {
+          width:clamp(70px, 5.5vw, 104px); height:clamp(58px, 4.6vw, 88px); object-fit:cover; border-radius:6px;
+          border:1px solid rgba(255,255,255,0.18); flex-shrink:0; cursor:zoom-in;
+        }
+        .pl-chip-grid { display:grid; grid-template-columns:1fr 1fr; gap:clamp(9px, 0.9vw, 13px) clamp(11px, 1vw, 14px); }
+        .pl-chip {
+          display:flex; align-items:center; gap:7px;
+          font-size:clamp(13px, 0.95vw, 16px); color:rgba(255,255,255,0.85);
+          background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.09);
+          border-radius:9px; padding:clamp(7px, 0.65vw, 10px) clamp(10px, 0.9vw, 14px); white-space:nowrap;
+        }
+        .pl-chip-pip { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .pl-chip-label { color:rgba(255,255,255,0.45); font-size:clamp(11.5px, 0.85vw, 14px); }
+        .pl-chip-val { overflow:hidden; text-overflow:ellipsis; }
+        .pl-station-cta {
+          margin-top:2px; text-align:center;
+          font-size:clamp(13.5px, 1vw, 16px); font-weight:800; letter-spacing:0.8px; text-transform:uppercase;
+          padding:clamp(13px, 1.1vw, 17px); border-radius:10px;
+          border:1px solid rgba(232,96,10,0.55);
+          color:#ffb488; background:rgba(232,96,10,0.10);
+          transition:background 0.25s, color 0.25s;
+        }
+        .pl-station:hover .pl-station-cta { background:rgba(232,96,10,0.22); }
+        .pl-station.is-active .pl-station-cta {
+          background:#e8600a; border-color:#e8600a; color:#fff;
+        }
+
+        @media (max-width: 980px) {
+          .pl-body { padding:84px 20px 52px; gap:24px; }
+        }
+        @media (max-width: 900px) {
+          .pl-hide-md { display:none !important; }
+        }
+        @media (max-width: 640px) {
+          .pl-topbar { height:58px !important; }
+          .pl-body { padding:78px 12px 50px; }
+          .pl-picker-cards { grid-template-columns:1fr; }
+          .pl-station-photo { height:160px; }
+          .pl-footer { padding:0 12px !important; }
+          .pl-footer-links { gap:12px !important; flex-wrap:wrap; }
+          .pl-footer-links a { font-size:10.5px !important; }
+          /* prevent iOS auto-zoom on focus (inputs < 16px) */
+          .pl-panel input, .pl-panel select { font-size:16px !important; }
+        }
+        @media (max-width: 480px) {
+          .pl-hide-sm { display:none !important; }
+          .pl-apptitle { font-size:12.5px !important; }
+          .pl-panel { padding:30px 22px 26px !important; }
+          .pl-logoband { padding:0 30px 0 10px !important; }
+          .pl-footer-links { display:none !important; }
+          .pl-footer { justify-content:center !important; }
+        }
       `}</style>
     </div>
   );

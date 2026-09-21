@@ -41,11 +41,11 @@ select:focus-visible {
 .app-wrapper {
   min-height: 100vh;
   background: #cddfd5;
-  padding: 32px;
+  padding: clamp(12px, 2.5vw, 32px);
 }
 
 .app-shell {
-  max-width: 1440px;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   background: #202425;
@@ -79,6 +79,26 @@ select:focus-visible {
   font-size: 22px;
   font-weight: 800;
   border: 1px solid #a8bdbd;
+  overflow: hidden;
+}
+.polaris-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Brand logo in the topbar */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .sidebar-nav {
@@ -137,6 +157,33 @@ select:focus-visible {
   font-size: 14px;
   font-weight: 700;
   border: 2px solid #91a8b2;
+}
+
+/* Profile button (avatar + role chip, click = logout) */
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.profile-role-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a5a63;
+  background: #e8eff3;
+  border: 1px solid #c5d4dc;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 1150px) {
+  .profile-role-chip { display: none; }
 }
 
 /* MAIN */
@@ -319,7 +366,7 @@ select:focus-visible {
 
 .card-header h2,
 .mini-card-header h2 {
-  font-size: 21px;
+  font-size: clamp(17px, 1.5vw + 11px, 21px);
   font-weight: 800;
   letter-spacing: -0.6px;
   line-height: 1.15;
@@ -408,7 +455,7 @@ select:focus-visible {
 
 .health-metric strong {
   display: block;
-  font-size: 29px;
+  font-size: clamp(22px, 2vw + 12px, 29px);
   font-weight: 500;
   letter-spacing: -1px;
   margin-top: 12px;
@@ -1123,6 +1170,11 @@ select:focus-visible {
   .health-metrics {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .dashboard-right-stack {
+    display: flex;
+    flex-direction: column;
   }
 
   .dashboard-bottom-grid {
@@ -3187,5 +3239,34 @@ select:focus-visible {
   .threshold-head,
   .threshold-row {
     grid-template-columns: minmax(0, 1fr) repeat(3, 62px);
+  }
+}
+
+/* Ultra-small phones (<420px) — keep grids single column, compress controls */
+@media (max-width: 420px) {
+  .metric-row,
+  .split-grid,
+  .station-grid,
+  .record-grid,
+  .reco-grid,
+  .impact-grid,
+  .climate-strip,
+  .station-kpis,
+  .fact-grid,
+  .sim-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .asset-prediction {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

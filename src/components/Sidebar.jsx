@@ -12,6 +12,7 @@ import {
   Settings,
   Compass,
 } from "lucide-react";
+import POLARIS_LOGO from "../assets/polaris-logo.png";
 
 export const menuItems = [
   { label: "Home", icon: Home },
@@ -36,7 +37,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="polaris-logo">
-        P
+        <img src={POLARIS_LOGO} alt="POLARIS" />
       </div>
 
       <nav className="sidebar-nav">

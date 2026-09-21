@@ -20,36 +20,60 @@ import { assetsByStation } from "../data/assets";
 const PolarisContext = createContext(null);
 
 export const ROLES = {
-  admin: {
-    id: "admin",
-    label: "System Administrator",
-    can: ["view", "simulate", "acknowledge", "configure", "admin"],
-  },
   operations: {
     id: "operations",
     label: "Station Operations Manager",
+    icon: "📊",
+    desc: "Full station overview + control",
     can: ["view", "simulate", "acknowledge", "configure"],
   },
   scientist: {
     id: "scientist",
-    label: "Research Scientist",
+    label: "Lead Research Scientist",
+    icon: "🔬",
+    desc: "Science payloads, environment, analytics",
+    can: ["view", "simulate"],
+  },
+  logistics: {
+    id: "logistics",
+    label: "Logistics Coordinator",
+    icon: "📦",
+    desc: "Supply levels, fuel, run-of-motion",
     can: ["view", "simulate"],
   },
   engineer: {
     id: "engineer",
     label: "Maintenance Engineer",
+    icon: "🔧",
+    desc: "Asset faults, maintenance, acknowledge",
     can: ["view", "simulate", "acknowledge"],
   },
-  readonly: {
-    id: "readonly",
-    label: "Read-only Researcher",
+  analyst: {
+    id: "analyst",
+    label: "Data Analyst",
+    icon: "📈",
+    desc: "Historical trends and reports",
     can: ["view"],
+  },
+  hse: {
+    id: "hse",
+    label: "HSE Officer",
+    icon: "🛡️",
+    desc: "Safety systems, alerts, environment",
+    can: ["view", "acknowledge"],
+  },
+  admin: {
+    id: "admin",
+    label: "System Administrator",
+    icon: "⚙️",
+    desc: "Everything incl. users and thresholds",
+    can: ["view", "simulate", "acknowledge", "configure", "admin"],
   },
 };
 
 const TICK_MS = 2500;
 
-export function PolarisProvider({ children, user }) {
+export function PolarisProvider({ children, user, initialStation }) {
   const [twin, setTwin] = useState(() => {
     const seed = createInitialState();
 
@@ -89,7 +113,7 @@ export function PolarisProvider({ children, user }) {
     return advance(advance(seed));
   });
 
-  const [selectedStation, setSelectedStation] = useState("maitri");
+  const [selectedStation, setSelectedStation] = useState(initialStation || "maitri");
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   const [thresholds, setThresholds] = useState(defaultThresholds);
   const [acknowledged, setAcknowledged] = useState([]);

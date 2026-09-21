@@ -7,6 +7,7 @@ import {
   WifiOff,
   LogOut,
 } from "lucide-react";
+import POLARIS_LOGO from "../assets/polaris-logo.png";
 
 export default function Topbar({
   selectedStation,
@@ -24,11 +25,16 @@ export default function Topbar({
     .slice(0, 2)
     .toUpperCase();
 
+  const roleLabel = user?.roleLabel || "";
+
   return (
     <header className="topbar">
       <div className="brand">
-        <h1>POLARIS</h1>
-        <p>Antarctic Digital Twin Platform</p>
+        <img className="brand-logo" src={POLARIS_LOGO} alt="POLARIS logo" />
+        <div>
+          <h1>POLARIS</h1>
+          <p>Antarctic Digital Twin Platform</p>
+        </div>
       </div>
 
       <div className="breadcrumb">
@@ -88,9 +94,17 @@ export default function Topbar({
           {alertCount > 0 && <span className="notification-dot" />}
         </button>
 
-        <div className="profile-avatar" title={user?.name || ""}>
-          {initials}
-        </div>
+        <button
+          className="icon-button profile-button"
+          onClick={onLogout}
+          title={roleLabel ? `${user?.name} — ${roleLabel} (click to log out)` : "Log out"}
+          aria-label="Log out"
+        >
+          <span className="profile-avatar">{initials}</span>
+          {roleLabel && (
+            <span className="profile-role-chip">{roleLabel}</span>
+          )}
+        </button>
 
         <button
           className="icon-button"
