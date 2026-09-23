@@ -2184,6 +2184,106 @@ select:focus-visible {
   margin-top: 5px;
 }
 
+.asset-ai-block {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(141, 229, 241, 0.12), rgba(170, 186, 255, 0.07));
+  border: 1px solid rgba(141, 229, 241, 0.3);
+  border-radius: 13px;
+  padding: 11px 12px 12px;
+}
+
+.asset-ai-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #8de5f1;
+  margin-bottom: 9px;
+}
+
+.asset-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.asset-ai-grid > div {
+  background: rgba(20, 27, 28, 0.65);
+  border-radius: 10px;
+  padding: 8px 9px;
+}
+
+.asset-ai-grid span {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #9fb0b2;
+  margin-bottom: 4px;
+}
+
+.asset-ai-grid strong {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #f0f6fc;
+}
+
+.asset-ai-grid strong.tone-green { color: #3fc98b; }
+.asset-ai-grid strong.tone-amber { color: #ffdf83; }
+.asset-ai-grid strong.tone-coral { color: #ff9b8e; }
+
+/* ---- Analytics: neural forecast panel ---- */
+
+.ai-station-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ai-station-metrics > div {
+  background: rgba(141, 229, 241, 0.08);
+  border: 1px solid rgba(141, 229, 241, 0.22);
+  border-radius: 13px;
+  padding: 12px 14px;
+}
+
+.ai-station-metrics span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #9fb0b2;
+  margin-bottom: 5px;
+}
+
+.ai-station-metrics strong {
+  font-size: 22px;
+  font-weight: 800;
+  color: #8de5f1;
+}
+
+.ai-live-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(63, 201, 139, 0.16);
+  border: 1px solid rgba(63, 201, 139, 0.5);
+  color: #3fc98b;
+  font-size: 9px;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 1px;
+  vertical-align: middle;
+}
+
+.ai-risk-green { color: #3fc98b; font-weight: 700; }
+.ai-risk-amber { color: #ffdf83; font-weight: 700; }
+.ai-risk-coral { color: #ff9b8e; font-weight: 700; }
+
 .asset-affected {
   margin-top: 14px;
 }

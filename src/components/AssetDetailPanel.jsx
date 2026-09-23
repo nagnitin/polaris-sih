@@ -1,4 +1,4 @@
-import { History, FlaskConical, Wrench, X, Crosshair } from "lucide-react";
+import { History, FlaskConical, Wrench, X, Crosshair, Brain } from "lucide-react";
 
 import {
   ResponsiveContainer,
@@ -47,12 +47,15 @@ export default function AssetDetailPanel({
   onSimulate,
   onHistory,
 }) {
-  const { station, logAction } = usePolaris();
+  const { station, logAction, aiByAsset } = usePolaris();
 
   if (!asset) return null;
 
   const live = station.assets[asset.id];
   if (!live) return null;
+
+  /* trained-network forecast for this exact asset, from live twin state */
+  const ai = aiByAsset?.[asset.id];
 
   const spec = baselines[asset.type] || {};
   const affected = impactChain(asset.id);
@@ -157,6 +160,44 @@ export default function AssetDetailPanel({
           <div>
             <span>Anomaly score</span>
             <strong>{live.anomaly}</strong>
+          </div>
+        </div>
+      )}
+
+      {ai && (
+        <div className="asset-ai-block">
+          <div className="asset-ai-head">
+            <Brain size={13} />
+
+            <span>Neural forecast — trained on live twin state</span>
+          </div>
+
+          <div className="asset-ai-grid">
+            <div>
+              <span>Failure risk</span>
+
+              <strong
+                className={
+                  ai.failureRiskPct >= 50
+                    ? "tone-coral"
+                    : ai.failureRiskPct >= 25
+                    ? "tone-amber"
+                    : "tone-green"
+                }
+              >
+                {ai.failureRiskPct.toFixed(1)}%
+              </strong>
+            </div>
+
+            <div>
+              <span>Predicted demand</span>
+              <strong>{ai.energyDemandKw.toFixed(1)} kW</strong>
+            </div>
+
+            <div>
+              <span>Attention index</span>
+              <strong>{Math.round(ai.operationalDemand)}/100</strong>
+            </div>
           </div>
         </div>
       )}

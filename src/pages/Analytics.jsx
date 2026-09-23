@@ -22,6 +22,13 @@ import { usePolaris } from "../context/PolarisContext";
 
 const MODELS = [
   {
+    name: "Neural asset forecaster",
+    approach: "28→32→16→3 MLP (scikit-learn, 38.5k samples)",
+    purpose:
+      "Failure risk %, energy demand kW and attention index per asset, straight from live twin state",
+    live: true,
+  },
+  {
     name: "Anomaly detection",
     approach: "Isolation Forest / statistical rules",
     purpose: "Flags sensor behaviour outside the learned envelope",
@@ -50,6 +57,7 @@ export default function Analytics({ navigate }) {
     kpis,
     selectedAssetId,
     setSelectedAssetId,
+    aiForecast,
   } = usePolaris();
 
   const [sort, setSort] = useState("risk");
@@ -154,6 +162,75 @@ export default function Analytics({ navigate }) {
 
       <div className="analytics-layout">
         <div className="analytics-main">
+          <Panel
+            tone="dark"
+            title="Neural forecast — station level"
+            subtitle="Trained network scoring every asset from the live twin state"
+            actions={<Brain size={17} />}
+          >
+            <div className="ai-station-metrics">
+              <div>
+                <span>Weighted failure risk</span>
+                <strong>{aiForecast.avgFailureRiskPct}%</strong>
+              </div>
+
+              <div>
+                <span>Predicted demand</span>
+                <strong>{aiForecast.totalEnergyKw} kW</strong>
+              </div>
+
+              <div>
+                <span>Attention index</span>
+                <strong>{Math.round(aiForecast.avgOperationalDemand)}/100</strong>
+              </div>
+            </div>
+
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Highest-risk assets (model)</th>
+                    <th>Failure risk</th>
+                    <th>Predicted demand</th>
+                    <th>Attention</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {aiForecast.topRisk.map(({ asset, failureRiskPct, energyDemandKw, operationalDemand }) => (
+                    <tr
+                      key={asset.id}
+                      className={selectedAssetId === asset.id ? "is-selected" : ""}
+                      onClick={() => setSelectedAssetId(asset.id)}
+                    >
+                      <td>
+                        <strong>{asset.name}</strong>
+                        <small>{asset.zone}</small>
+                      </td>
+
+                      <td>
+                        <span
+                          className={
+                            failureRiskPct >= 50
+                              ? "ai-risk-coral"
+                              : failureRiskPct >= 25
+                              ? "ai-risk-amber"
+                              : "ai-risk-green"
+                          }
+                        >
+                          {failureRiskPct.toFixed(1)}%
+                        </span>
+                      </td>
+
+                      <td>{energyDemandKw.toFixed(1)} kW</td>
+                      <td>{Math.round(operationalDemand)}/100</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+
           <Panel
             tone="dark"
             title="Asset health ranking"
@@ -352,6 +429,7 @@ export default function Analytics({ navigate }) {
                     <tr key={m.name}>
                       <td>
                         <strong>{m.name}</strong>
+                        {m.live && <em className="ai-live-badge">LIVE</em>}
                       </td>
                       <td>{m.approach}</td>
                       <td>{m.purpose}</td>

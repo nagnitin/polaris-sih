@@ -16,6 +16,8 @@ import {
 
 import { deriveIncidents } from "../data/incidents";
 import { assetsByStation } from "../data/assets";
+import { stationProfiles } from "../data/stationProfiles";
+import { predictStation } from "../data/aiModel";
 
 const PolarisContext = createContext(null);
 
@@ -232,7 +234,37 @@ export function PolarisProvider({ children, user, initialStation }) {
     [twin, thresholds]
   );
 
+  /*
+    AI forecast — the trained neural network (see ai-model/train.py)
+    scores every asset from the SAME live twin state that drives the 3D
+    scene, so predictions always move with the simulation.
+  */
+  const aiForecast = useMemo(() => {
+    const profile = stationProfiles[selectedStation];
+    const p = profile?.personnel || {};
+    const complement = Math.round(
+      ((p.summerStaff || 0) +
+        (p.summerScientists || 0) +
+        (p.winterStaff || 0) +
+        (p.winterScientists || 0)) /
+        2
+    );
+
+    return predictStation(assetsByStation[selectedStation], station, {
+      env: station.env,
+      personnel: complement,
+    });
+  }, [station, selectedStation]);
+
   const assets = assetsByStation[selectedStation];
+
+  const aiByAsset = useMemo(
+    () =>
+      Object.fromEntries(
+        aiForecast.rows.map((r) => [r.asset.id, r])
+      ),
+    [aiForecast]
+  );
 
   const role = ROLES[user?.role || "operations"];
 
@@ -249,6 +281,8 @@ export function PolarisProvider({ children, user, initialStation }) {
     allKpis,
     incidents,
     fleetIncidents,
+    aiForecast,
+    aiByAsset,
     acknowledged,
     acknowledgeIncident,
     selectedAssetId,
